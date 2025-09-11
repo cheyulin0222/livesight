@@ -3,6 +3,7 @@ package com.arplanets.LiveSight.authorization.security.jwt;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.Verification;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -75,6 +76,10 @@ public class OrderJwtManager {
         }
 
         return verification.build();
+    }
+
+    public DecodedJWT verify(String accessToken) {
+        return jwtVerifier().verify(accessToken);
     }
 
     private KeyPair loadKeyPairFromBytes(byte[] keyBytes) throws Exception  {

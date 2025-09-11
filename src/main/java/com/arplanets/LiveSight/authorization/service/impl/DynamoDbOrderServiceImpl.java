@@ -1,5 +1,6 @@
 package com.arplanets.LiveSight.authorization.service.impl;
 
+import com.arplanets.LiveSight.authorization.aspect.OrderIdLock;
 import com.arplanets.LiveSight.authorization.exception.OrderApiException;
 import com.arplanets.LiveSight.authorization.exception.enums.OrderErrorCode;
 import com.arplanets.LiveSight.authorization.log.ErrorContext;
@@ -19,6 +20,7 @@ import com.arplanets.LiveSight.authorization.security.jwt.OrderJwtManager;
 import com.arplanets.LiveSight.authorization.service.LiveSightService;
 import com.arplanets.LiveSight.authorization.service.OrderService;
 import com.arplanets.commons.utils.ClientInfoUtil;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,6 +40,7 @@ import java.security.SecureRandom;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -66,6 +69,9 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final IotDataPlaneClient iotDataPlaneClient;
     private final ObjectMapper objectMapper;
+
+    private final ConcurrentHashMap<String, Object> orderLocks = new ConcurrentHashMap<>();
+
 
     @Override
     public OrderDto createOrder(HttpServletRequest request, String productId, String namespace, String authType, String authTypeId, String salt) {
@@ -129,6 +135,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
 
     @Override
     public OrderDto activateOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId) {
+
         // 取得 Live Sight ID
         String liveSightId = extractUuid(namespace);
 
@@ -239,6 +246,9 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         // 修改訂單資料
         OrderPo result = orderRepository.update(buildVoidedOrder(storedOrder, staffId));
 
+        // 將訂單資訊傳到 Iot
+        sendIotRequest(result);
+
         // 將訂單資料暫存以做 Audit Log
         setResponseContext(request, result);
 
@@ -303,11 +313,36 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         // 修改訂單資料
         OrderPo result = orderRepository.update(buildReturnedOrder(storedOrder, staffId));
 
+        // 將訂單資訊傳到 Iot
+        sendIotRequest(result);
+
         // 將訂單資料暫存以做 Audit Log
         setResponseContext(request, result);
 
         // 回傳訂單資訊
         return orderMapper.orderPoToOrderDto(result);
+    }
+
+    @Override
+    public void verifyToken(String accessToken) {
+        // 驗證 Token
+        DecodedJWT jwt = orderJwtManager.verify(accessToken);
+
+        String orderId = jwt.getSubject();
+        Optional<OrderPo> option = orderRepository.findById(orderId);
+
+        if (option.isEmpty()) {
+            throw new OrderApiException(OrderErrorCode._004);
+        }
+
+        OrderPo order = option.get();
+
+        OrderStatus orderStatus = order.getOrderStatus();
+
+        if (orderStatus != OrderStatus.REDEEMED) {
+            throw new OrderApiException(OrderErrorCode._015);
+        }
+
     }
 
     private String hashWithSHA256(String orderId, String salt) {
@@ -505,7 +540,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     }
 
     private void sendIotRequest(OrderPo orderPo) {
-        String topic = iotTopic + orderPo.getOrderId();
+        String topic = iotTopic + getTopicAction(orderPo) + orderPo.getOrderId();
 
         PublishRequest publishRequest = PublishRequest.builder()
                 .topic(topic)
@@ -515,6 +550,11 @@ public class DynamoDbOrderServiceImpl implements OrderService {
 
         iotDataPlaneClient.publish(publishRequest);
     }
+
+    private String getTopicAction(OrderPo orderPo) {
+        OrderStatus orderStatus = orderPo.getOrderStatus();
+        return orderStatus == OrderStatus.ACTIVATED ? "active/" : "revoke/";
+     }
 
 
     private SdkBytes buildPayload(OrderPo orderPo) {

@@ -14,7 +14,8 @@ public enum OrderErrorCode implements BusinessExceptionDisplay {
     _011("無效的 Redeem Code"),
     _012("目前的訂單狀態不可兌換"),
     _013("訂單已作廢"),
-    _014("目前的訂單狀態不可歸還");
+    _014("目前的訂單狀態不可歸還"),
+    _015("訂單已失效");
 
     private final String message;
 

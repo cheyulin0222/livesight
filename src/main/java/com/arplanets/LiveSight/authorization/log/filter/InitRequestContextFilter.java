@@ -51,13 +51,12 @@ public class InitRequestContextFilter extends OncePerRequestFilter {
     }
 
     private void setMdc() {
-        String currentHourlyDate = LocalDateTime.now().format(DATE_FORMATTER);
+        String currentHourlyDate = LocalDateTime.now(ZoneId.of("Asia/Taipei")).format(DATE_FORMATTER);
         MDC.put(HOURLY_DATE_KEY, logStreamPrefix + "-logs-" + currentHourlyDate);
     }
 
     private String generateId() {
-        ZoneId taipeiZone = ZoneId.of("Asia/Taipei");
-        String timestamp = LocalDateTime.now(taipeiZone)
+        String timestamp = LocalDateTime.now(ZoneId.of("Asia/Taipei"))
                 .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
 
         return "%s-%s-%s".formatted("request", timestamp, UUID.randomUUID().toString());

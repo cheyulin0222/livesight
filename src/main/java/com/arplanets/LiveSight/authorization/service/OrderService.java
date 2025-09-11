@@ -17,6 +17,7 @@ public interface OrderService {
     OrderDto voidOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId);
     OrderDto returnOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId);
     PageResult<OrderDto> listOrder(String productId, String orgId, String namespace, ZonedDateTime startDate, ZonedDateTime endDate, PageRequest page);
+    void verifyToken(String accessToken);
 
 
 }
