@@ -1,11 +1,8 @@
 package com.arplanets.commons.utils;
 
-import com.arplanets.LiveSight.authorization.model.ClientInfo;
+import com.arplanets.corexrapi.livesight.model.ClientInfo;
 import eu.bitwalker.useragentutils.*;
 import jakarta.servlet.http.HttpServletRequest;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class ClientInfoUtil {
 
