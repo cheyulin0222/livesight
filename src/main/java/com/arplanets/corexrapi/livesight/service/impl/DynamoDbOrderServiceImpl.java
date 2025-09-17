@@ -142,7 +142,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         String redeemCode = genRedeemCode();
 
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildActivatedOrder(orderId, staffId, redeemCode));
+        OrderPo result = orderRepository.update(buildActivatedOrder(orderId, productId, staffId, redeemCode));
 
         // 非同步將訂單資訊傳到 Iot
         iotService.sendIotRequest(buildTopicPath(result), buildPayload(result), loggingService.initApiMessage(result.getOrderId()));
@@ -165,7 +165,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         String accessToken = orderJwtManager.genAccessToken(orderId, productId, now);
 
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildRedeemedOrder(orderId, accessToken, now));
+        OrderPo result = orderRepository.update(buildRedeemedOrder(orderId, productId, redeemCode, accessToken, now));
 
         // 將訂單資料暫存以做 Audit Log
         setResponseContext(request, result);
@@ -186,7 +186,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         validateOrg(orgId, liveSightId);
 
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildVoidedOrder(orderId, staffId));
+        OrderPo result = orderRepository.update(buildVoidedOrder(orderId, productId, staffId));
 
         // 將訂單資訊傳到 Iot
         iotService.sendIotRequest(buildTopicPath(result), buildPayload(result), loggingService.initApiMessage(result.getOrderId()));
@@ -239,7 +239,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         validateOrg(orgId, liveSightId);
 
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildReturnedOrder(orderId, staffId));
+        OrderPo result = orderRepository.update(buildReturnedOrder(orderId, productId, staffId));
 
         // 將訂單資訊傳到 Iot
         iotService.sendIotRequest(buildTopicPath(result), buildPayload(result), loggingService.initApiMessage(result.getOrderId()));
@@ -397,12 +397,13 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     }
 
 
-    private OrderPo buildActivatedOrder(String orderId, String staffId, String redeemCode) {
+    private OrderPo buildActivatedOrder(String orderId, String productId, String staffId, String redeemCode) {
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
         ZonedDateTime expiredAt = now.plusMinutes(redeemCodeExpirationMinutes);
 
         return OrderPo.builder()
                 .orderId(orderId)
+                .productId(productId)
                 .orderStatus(OrderStatus.ACTIVATED)
                 .activatedAt(now)
                 .activatedBy(staffId)
@@ -412,10 +413,12 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .build();
     }
 
-    private OrderPo buildRedeemedOrder(String orderId, String accessToken, ZonedDateTime now) {
+    private OrderPo buildRedeemedOrder(String orderId, String productId, String redeemCode, String accessToken, ZonedDateTime now) {
         return OrderPo.builder()
                 .orderId(orderId)
+                .productId(productId)
                 .orderStatus(OrderStatus.REDEEMED)
+                .redeemCode(redeemCode)
                 .redeemedAt(now)
                 .accessToken(accessToken)
                 .expiredAt(now.plusMinutes(jwtExpirationMinutes))
@@ -423,11 +426,12 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .build();
     }
 
-    private OrderPo buildVoidedOrder(String orderId, String staffId) {
+    private OrderPo buildVoidedOrder(String orderId, String productId, String staffId) {
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
         return OrderPo.builder()
                 .orderId(orderId)
+                .productId(productId)
                 .orderStatus(OrderStatus.VOIDED)
                 .voidedAt(now)
                 .voidedBy(staffId)
@@ -435,10 +439,11 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .build();
     }
 
-    private OrderPo buildReturnedOrder(String orderId, String staffId) {
+    private OrderPo buildReturnedOrder(String orderId, String productId, String staffId) {
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
         return OrderPo.builder()
                 .orderId(orderId)
+                .productId(productId)
                 .orderStatus(OrderStatus.COMPLETED)
                 .returnedAt(now)
                 .returnedBy(staffId)

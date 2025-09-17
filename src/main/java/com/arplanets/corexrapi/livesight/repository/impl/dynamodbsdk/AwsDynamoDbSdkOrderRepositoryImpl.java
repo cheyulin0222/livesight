@@ -141,117 +141,101 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
             throw new IllegalArgumentException("Order and OrderId must not be null.");
         }
 
-        Map<String, AttributeValueUpdate> item = new HashMap<>();
+        StringBuilder updateExpression = new StringBuilder("SET ");
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
 
-        Optional.ofNullable(order.getOrderStatus()).ifPresent(s ->
-            item.put("order_status", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(order.getOrderStatus().name()).build())
-                    .action(AttributeAction.PUT)
-                        .build())
-        );
+        Optional.ofNullable(order.getOrderStatus()).ifPresent(s -> {
+            updateExpression.append("order_status = :val_order_status, ");
+            expressionAttributeValues.put(":val_order_status", AttributeValue.builder().s(s.name()).build());
+        });
 
-        Optional.ofNullable(order.getVerificationCode()).ifPresent(s ->
-            item.put("verification_code", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(order.getVerificationCode()).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getVerificationCode()).ifPresent(s -> {
+            updateExpression.append("verification_code = :val_verification_code, ");
+            expressionAttributeValues.put(":val_verification_code", AttributeValue.builder().s(s).build());
+        });
 
-        Optional.ofNullable(order.getActivatedAt()).ifPresent(s ->
-            item.put("activated_at", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getActivatedAt())).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getActivatedAt()).ifPresent(s -> {
+            updateExpression.append("activated_at = :val_activated_at, ");
+            expressionAttributeValues.put(":val_activated_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
+        });
 
-        Optional.ofNullable(order.getActivatedBy()).ifPresent(s ->
-            item.put("activated_by", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(order.getActivatedBy()).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getActivatedBy()).ifPresent(s -> {
+            updateExpression.append("activated_by = :val_activated_by, ");
+            expressionAttributeValues.put(":val_activated_by", AttributeValue.builder().s(s).build());
+        });
 
-        Optional.ofNullable(order.getRedeemCode()).ifPresent(s ->
-            item.put("redeem_code", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(order.getRedeemCode()).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getRedeemCode()).ifPresent(s -> {
+            updateExpression.append("redeem_code = :val_redeem_code, ");
+            expressionAttributeValues.put(":val_redeem_code", AttributeValue.builder().s(s).build());
+        });
 
-        Optional.ofNullable(order.getRedeemedAt()).ifPresent(s ->
-            item.put("redeemed_at", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getRedeemedAt())).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getRedeemedAt()).ifPresent(s -> {
+            updateExpression.append("redeemed_at = :val_redeemed_at, ");
+            expressionAttributeValues.put(":val_redeemed_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
+        });
 
-        Optional.ofNullable(order.getAccessToken()).ifPresent(s ->
-            item.put("access_token", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(order.getAccessToken()).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getAccessToken()).ifPresent(s -> {
+            updateExpression.append("access_token = :val_access_token, ");
+            expressionAttributeValues.put(":val_access_token", AttributeValue.builder().s(s).build());
+        });
 
-        Optional.ofNullable(order.getVoidedAt()).ifPresent(s ->
-            item.put("voided_at", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getVoidedAt())).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getVoidedAt()).ifPresent(s -> {
+            updateExpression.append("voided_at = :val_voided_at, ");
+            expressionAttributeValues.put(":val_voided_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
+        });
 
-        Optional.ofNullable(order.getVoidedBy()).ifPresent(s ->
-            item.put("voided_by", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(order.getVoidedBy()).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getVoidedBy()).ifPresent(s -> {
+            updateExpression.append("voided_by = :val_voided_by, ");
+            expressionAttributeValues.put(":val_voided_by", AttributeValue.builder().s(s).build());
+        });
 
-        Optional.ofNullable(order.getReturnedAt()).ifPresent(s ->
-            item.put("returned_at", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getReturnedAt())).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getReturnedAt()).ifPresent(s -> {
+            updateExpression.append("returned_at = :val_returned_at, ");
+            expressionAttributeValues.put(":val_returned_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
+        });
 
-        Optional.ofNullable(order.getReturnedBy()).ifPresent(s ->
-            item.put("returned_by", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(order.getReturnedBy()).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getReturnedBy()).ifPresent(s -> {
+                updateExpression.append("returned_by = :val_returned_by, ");
+                expressionAttributeValues.put(":val_returned_by", AttributeValue.builder().s(s).build());
+        });
 
-        Optional.ofNullable(order.getExpiredAt()).ifPresent(s ->
-            item.put("expired_at", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getExpiredAt())).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getExpiredAt()).ifPresent(s -> {
+            updateExpression.append("expired_at = :val_expired_at, ");
+            expressionAttributeValues.put(":val_expired_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
+        });
 
-        Optional.ofNullable(order.getUpdatedAt()).ifPresent(s ->
-            item.put("updated_at", AttributeValueUpdate.builder()
-                    .value(AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getUpdatedAt())).build())
-                    .action(AttributeAction.PUT)
-                    .build())
-        );
+        Optional.ofNullable(order.getUpdatedAt()).ifPresent(s -> {
+                    updateExpression.append("updated_at = :val_updated_at, ");
+                    expressionAttributeValues.put(":val_updated_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
+        });
+
+        // 如果沒有任何欄位要更新，則直接返回，避免發送無效請求
+        if (expressionAttributeValues.isEmpty()) {
+            return order;
+        }
+
+        // 移除 updateExpression 最後多出來的 ", "
+        updateExpression.setLength(updateExpression.length() - 2);
 
         String conditionExpression = null;
-        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
         if (order.getOrderStatus() == OrderStatus.VOIDED) {
-            conditionExpression = "order_status != :expectedStatus AND product_id = :expectedProductId AND attribute_exists(orderId)";
+            conditionExpression = "order_status <> :expectedStatus AND product_id = :expectedProductId AND attribute_exists(order_id)";
             // 驗證 status
             expressionAttributeValues.put(":expectedStatus", AttributeValue.builder().s(OrderStatus.VOIDED.name()).build());
             // 驗證 ProductId
             expressionAttributeValues.put(":expectedProductId", AttributeValue.builder().s(order.getProductId()).build());
         } else if (order.getOrderStatus() == OrderStatus.ACTIVATED) {
-            conditionExpression = "order_status = :expectedStatus AND product_id = :expectedProductId AND expired_at > :now AND attribute_exists(orderId)";
+            log.info("productId:{}", order.getProductId());
+            conditionExpression = "order_status = :expectedStatus AND product_id = :expectedProductId AND expired_at > :now AND attribute_exists(order_id)";
             // 驗證 status
             expressionAttributeValues.put(":expectedStatus", AttributeValue.builder().s(OrderStatus.PENDING.name()).build());
             // 驗證 Product ID
             expressionAttributeValues.put(":expectedProductId", AttributeValue.builder().s(order.getProductId()).build());
             // 驗證效期
+            log.info("now:{}", DateTimeConverter.toFormattedString(order.getUpdatedAt()));
             expressionAttributeValues.put(":now", AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getUpdatedAt())).build());
         } else if (order.getOrderStatus() == OrderStatus.REDEEMED) {
-            conditionExpression = "order_status = :expectedStatus AND expired_at > :now AND attribute_exists(orderId) AND redeem_code = :redeemCode AND product_id = :expectedProductId";
+            conditionExpression = "order_status = :expectedStatus AND expired_at > :now AND attribute_exists(order_id) AND redeem_code = :redeemCode AND product_id = :expectedProductId";
             // 驗證 Redeem Code
             expressionAttributeValues.put(":redeemCode", AttributeValue.builder().s(order.getRedeemCode()).build());
             // 驗證 status
@@ -261,7 +245,7 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
             // 驗證效期
             expressionAttributeValues.put(":now", AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getUpdatedAt())).build());
         } else if (order.getOrderStatus() == OrderStatus.COMPLETED) {
-            conditionExpression = "order_status = :expectedStatus AND product_id = :expectedProductId AND attribute_exists(orderId)";
+            conditionExpression = "order_status = :expectedStatus AND product_id = :expectedProductId AND attribute_exists(order_id)";
             // 驗證 status
             expressionAttributeValues.put(":expectedStatus", AttributeValue.builder().s(OrderStatus.REDEEMED.name()).build());
             // 驗證 ProductId
@@ -279,13 +263,15 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
                 .tableName(tableName)
                 .key(Map.of(PK_ATTRIBUTE_NAME, AttributeValue.builder().s(order.getOrderId()).build(),
                         SK_ATTRIBUTE_NAME, AttributeValue.builder().s(SK_VALUE).build()))
-                .attributeUpdates(item)
+                .updateExpression(updateExpression.toString())
                 .conditionExpression(conditionExpression)
                 .expressionAttributeValues(expressionAttributeValues)
+                .returnValues(ReturnValue.ALL_NEW)
                 .build();
 
         try {
-            dynamoDbClient.updateItem(updateItemRequest);
+            UpdateItemResponse response = dynamoDbClient.updateItem(updateItemRequest);
+            order = mapToOrderPo(response.attributes());
         } catch (ConditionalCheckFailedException e) {
             if (order.getOrderStatus() == OrderStatus.VOIDED) {
                 throw new OrderApiException(OrderErrorCode._016);

@@ -6,6 +6,9 @@
     <springProperty scope="context" name="logGroupName" source="aws.cloudwatch.log-group-name"/>
     <springProperty scope="context" name="applicationName" source="spring.application.name"/>
 
+    <define name="startupHourlyDate" class="com.arplanets.corexrapi.livesight.log.TaipeiTimestampPropertyDefiner" />
+
+
     <!-- 輸出路徑 -->
     <springProperty name="logging.path" source="logging.file.path" defaultValue="./logs/"/>
 
@@ -110,6 +113,7 @@
     <appender name="SIFT_AWS_LOGS" class="ch.qos.logback.classic.sift.SiftingAppender">
         <discriminator>
             <Key>hourlyDate</Key>
+            <defaultValue>live-sight-logs-${startupHourlyDate}</defaultValue>
         </discriminator>
         <sift>
             <appender name="AWS_LOGS-${hourlyDate}" class="ca.pjer.logback.AwsLogsAppender">
