@@ -302,6 +302,7 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
                         ":start_date", AttributeValue.builder().s(DateTimeConverter.toFormattedString(startDate)).build(),
                         ":end_date", AttributeValue.builder().s(DateTimeConverter.toFormattedString(endDate)).build()
                 ))
+                .scanIndexForward(false)
                 // 取多一筆數量，為了判斷有沒有下一筆
                 .limit(pageSize + 1);
 
