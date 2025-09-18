@@ -33,7 +33,7 @@ build/
 .vscode/
 
 # 忽略 logs 目錄
-logs/
+/logs/
 
 # 忽略 application-dev.properties 文件
 application.properties
@@ -42,7 +42,7 @@ application-test.properties
 application-jeremy.properties
 application-prod.properties
 
-config/
+/src/main/resources/config/
 
 # Git 忽略檔案
 private_key.pem
