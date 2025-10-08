@@ -1,0 +1,205 @@
+@startuml
+!theme plain
+skinparam monochrome true
+skinparam shadowing false
+
+title LiveSight API Class Diagram
+
+folder "Core Application" {
+    class LiveSightApplication {
+        +main(String[] args)
+    }
+}
+
+folder "Controller" as Controller {
+    class ApiOrderController <<(C,lightblue) RestController>> {
+        -OrderService orderService
+        -OrderMapper orderMapper
+        +createOrder(OrderCreateRequest)
+        +fetchStatus(OrderFetchStatusRequest)
+        +redeem(OrderRedeemRequest)
+    }
+    class MgOrderController <<(C,lightblue) RestController>> {
+        -OrderService orderService
+        -OrderMapper orderMapper
+        +getOrderInfo(OrderInfoRequest)
+        +listOrders(OrderListRequest)
+        +activateOrder(OrderActivateRequest)
+        +voidOrder(OrderVoidRequest)
+        +returnOrder(OrderReturnRequest)
+    }
+    class LiveSightController <<(C,lightblue) RestController>> {
+        -LiveSightService liveSightService
+        +create(LiveSightCreateRequest)
+    }
+    class ValidationController <<(C,lightblue) RestController>> {
+        -OrderService orderService
+        +validatedToken(TokenVerifyRequest)
+    }
+    class JwkSetController <<(C,lightblue) RestController>> {
+        -OrderJwtManager orderJwtManager
+        +jwkSet()
+    }
+}
+
+folder "Service" as Service {
+    interface OrderService
+    interface LiveSightService
+
+    class DynamoDbOrderServiceImpl <<(S,lightgreen) Service>> {
+        -LiveSightService liveSightService
+        -OrderJwtManager orderJwtManager
+        -OrderRepository orderRepository
+        -IotService iotService
+    }
+    class DynamoDbLiveSightServiceImpl <<(S,lightgreen) Service>> {
+        -LiveSightRepository liveSightRepository
+        -ServiceOrgMemberRepository serviceOrgMemberRepository
+    }
+    class IotService <<(S,lightgreen) Service>> {
+        -IotDataPlaneClient iotDataPlaneClient
+        +sendIotRequest(topic, payload)
+    }
+}
+
+folder "Repository" as Repository {
+    interface OrderRepository
+    interface LiveSightRepository
+    interface ServiceOrgMemberRepository <<JpaRepository>>
+
+    class AwsDynamoDbSdkOrderRepositoryImpl <<(R,orange) Repository>> {
+        -DynamoDbClient dynamoDbClient
+    }
+    class AwsDynamoDbSdkLiveSightRepository <<(R,orange) Repository>> {
+        -DynamoDbClient dynamoDbClient
+    }
+}
+
+folder "Model" as Model {
+    class OrderPo
+    class LiveSightPo
+    class ServiceOrgMember <<Entity>>
+    class OrderDto
+    class LiveSightDto
+    enum OrderStatus
+    class OrderCreateRequest
+    class OrderInfoRequest
+    class OrderCreateResponse
+    class OrderInfoResponse
+}
+
+folder "Mapper" as Mapper {
+    interface OrderMapper <<Mapper>> {
+        +orderPoToOrderDto(OrderPo) : OrderDto
+        +orderDtoToOrderInfoResponse(OrderDto) : OrderInfoResponse
+    }
+    interface LiveSightMapper <<Mapper>> {
+        +liveSightPoToLiveSightDto(LiveSightPo) : LiveSightDto
+    }
+}
+
+folder "Security" as Security {
+    class SecurityConfig <<Configuration>> {
+        +securityFilterChain(HttpSecurity)
+        +jwtDecoder() : JwtDecoder
+    }
+    class MultiIssuerJwtDecoder <<Component>> {
+        +decode(String token) : Jwt
+    }
+    class OrderJwtManager <<Component>> {
+        -KeyPair keyPair
+        +genAccessToken(...) : String
+        +verify(String) : DecodedJWT
+    }
+    class CustomAccessDeniedHandler
+    class CustomAuthenticationEntrypoint
+}
+
+folder "Log & Exception" as LogException {
+    class ExceptionHandleAdvice <<RestControllerAdvice>>
+    class OrderApiException
+    class LoggingFilter
+    class AuditLogProducer {
+        -SqsClient sqsClient
+    }
+}
+
+folder "Config & Utils" as ConfigUtils {
+    class AwsConfig <<Configuration>> {
+        +dynamoDbClient() : DynamoDbClient
+        +sqsClient() : SqsClient
+        +iotDataPlaneClient() : IotDataPlaneClient
+    }
+    class ClientInfoUtil
+}
+
+' ---------------------
+' Relationships
+' ---------------------
+
+' Layer dependencies
+Controller .> Service
+Controller .> Mapper
+Controller .> Security
+Controller .> Model
+Service .> Repository
+Service .> Security
+Service .> Mapper
+Service .> Model
+Repository .> ConfigUtils
+Repository .> Model
+
+' Specific relationships
+ApiOrderController ..> OrderService
+MgOrderController ..> OrderService
+LiveSightController ..> LiveSightService
+ValidationController ..> OrderService
+
+DynamoDbOrderServiceImpl ..> OrderRepository
+DynamoDbOrderServiceImpl ..> LiveSightService
+DynamoDbOrderServiceImpl ..> IotService
+DynamoDbOrderServiceImpl ..> OrderJwtManager
+DynamoDbLiveSightServiceImpl ..> LiveSightRepository
+DynamoDbLiveSightServiceImpl ..> ServiceOrgMemberRepository
+IotService ..> IotDataPlaneClient
+
+AwsDynamoDbSdkOrderRepositoryImpl ..> DynamoDbClient
+AwsDynamoDbSdkLiveSightRepository ..> DynamoDbClient
+AuditLogProducer ..> SqsClient
+
+' Service Implements Interface
+DynamoDbOrderServiceImpl ..|> OrderService
+DynamoDbLiveSightServiceImpl ..|> LiveSightService
+AwsDynamoDbSdkOrderRepositoryImpl ..|> OrderRepository
+AwsDynamoDbSdkLiveSightRepository ..|> LiveSightRepository
+ServiceOrgMemberRepository <|-- JpaRepository
+
+' Data Mapping
+ApiOrderController ..> OrderMapper
+MgOrderController ..> OrderMapper
+DynamoDbOrderServiceImpl ..> OrderMapper
+DynamoDbLiveSightServiceImpl ..> LiveSightMapper
+
+OrderMapper ..> OrderPo
+OrderMapper ..> OrderDto
+OrderMapper ..> OrderCreateResponse
+OrderMapper ..> OrderInfoResponse
+LiveSightMapper ..> LiveSightPo
+LiveSightMapper ..> LiveSightDto
+
+' Security
+SecurityConfig ..> MultiIssuerJwtDecoder
+SecurityConfig ..> CustomAccessDeniedHandler
+SecurityConfig ..> CustomAuthenticationEntrypoint
+JwkSetController ..> OrderJwtManager
+
+' AWS Clients
+AwsConfig --> DynamoDbClient
+AwsConfig --> SqsClient
+AwsConfig --> IotDataPlaneClient
+
+AwsDynamoDbSdkOrderRepositoryImpl ..> DynamoDbClient
+AwsDynamoDbSdkLiveSightRepository ..> DynamoDbClient
+AuditLogProducer ..> SqsClient
+
+@enduml

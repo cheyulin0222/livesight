@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.StringUtils;
@@ -33,6 +34,7 @@ public class LiveSightController {
 
     @PostMapping(value = "/create", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "建立 Live Sight", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#request.orgId, #authentication)")
     public ResponseEntity<LiveSightResponse> create(@RequestBody @Valid LiveSightCreateRequest request, Authentication authentication) {
 
         String username = null;

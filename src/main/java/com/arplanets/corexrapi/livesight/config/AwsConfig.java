@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.iotdataplane.IotDataPlaneClient;
 import software.amazon.awssdk.services.sqs.SqsClient;
@@ -26,6 +27,16 @@ public class AwsConfig {
     private String secretKey;
     @Value("${aws.iot.endpoint}")
     private String iotEndpoint;
+
+    @Bean
+    public CloudWatchLogsAsyncClient cloudWatchLogsAsyncClient() {
+        log.info("Start Cloud Watch Logs Async Client");
+        return CloudWatchLogsAsyncClient.builder()
+                .region(Region.of(awsRegion))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(accessKey, secretKey)))
+                .build();
+    }
 
     @Bean
     public DynamoDbClient dynamoDbClient() {

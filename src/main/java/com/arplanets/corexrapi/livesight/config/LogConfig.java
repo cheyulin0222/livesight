@@ -6,7 +6,6 @@ import com.arplanets.corexrapi.livesight.log.filter.InitRequestContextFilter;
 import com.arplanets.corexrapi.livesight.log.filter.LoggingFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,9 +14,6 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 @Configuration
 @RequiredArgsConstructor
 public class LogConfig {
-
-    @Value("${spring.application.name}")
-    private String applicationName;
 
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
@@ -31,7 +27,7 @@ public class LogConfig {
 
     @Bean
     public InitRequestContextFilter initRequestContextFilter() {
-        return new InitRequestContextFilter(applicationName);
+        return new InitRequestContextFilter();
     }
 
     @Bean

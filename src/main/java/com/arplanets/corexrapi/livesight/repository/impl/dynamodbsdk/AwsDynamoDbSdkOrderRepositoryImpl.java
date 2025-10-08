@@ -225,14 +225,12 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
             // 驗證 ProductId
             expressionAttributeValues.put(":expectedProductId", AttributeValue.builder().s(order.getProductId()).build());
         } else if (order.getOrderStatus() == OrderStatus.ACTIVATED) {
-            log.info("productId:{}", order.getProductId());
             conditionExpression = "order_status = :expectedStatus AND product_id = :expectedProductId AND expired_at > :now AND attribute_exists(order_id)";
             // 驗證 status
             expressionAttributeValues.put(":expectedStatus", AttributeValue.builder().s(OrderStatus.PENDING.name()).build());
             // 驗證 Product ID
             expressionAttributeValues.put(":expectedProductId", AttributeValue.builder().s(order.getProductId()).build());
             // 驗證效期
-            log.info("now:{}", DateTimeConverter.toFormattedString(order.getUpdatedAt()));
             expressionAttributeValues.put(":now", AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getUpdatedAt())).build());
         } else if (order.getOrderStatus() == OrderStatus.REDEEMED) {
             conditionExpression = "order_status = :expectedStatus AND expired_at > :now AND attribute_exists(order_id) AND redeem_code = :redeemCode AND product_id = :expectedProductId";

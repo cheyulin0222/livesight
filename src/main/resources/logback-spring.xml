@@ -1,14 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <springProperty scope="context" name="awsRegion" source="aws.region"/>
-    <springProperty scope="context" name="awsAccessKey" source="aws.access.key"/>
-    <springProperty scope="context" name="awsSecretKey" source="aws.secret.key"/>
-    <springProperty scope="context" name="logGroupName" source="aws.cloudwatch.log-group-name"/>
-    <springProperty scope="context" name="applicationName" source="spring.application.name"/>
-
-    <define name="startupHourlyDate" class="com.arplanets.corexrapi.livesight.log.TaipeiTimestampPropertyDefiner" />
-
-
     <!-- 輸出路徑 -->
     <springProperty name="logging.path" source="logging.file.path" defaultValue="./logs/"/>
 
@@ -110,27 +101,8 @@
     </appender>
 
      AWS CloudWatch Appender
-    <appender name="SIFT_AWS_LOGS" class="ch.qos.logback.classic.sift.SiftingAppender">
-        <discriminator>
-            <Key>hourlyDate</Key>
-            <defaultValue>live-sight-logs-${startupHourlyDate}</defaultValue>
-        </discriminator>
-        <sift>
-            <appender name="AWS_LOGS-${hourlyDate}" class="ca.pjer.logback.AwsLogsAppender">
-                <layout class="ch.qos.logback.classic.PatternLayout">
-                    <pattern>%m%n</pattern>
-                </layout>
-                <logGroupName>${logGroupName}</logGroupName>
-                <logStreamName>${hourlyDate}</logStreamName>
-                <maxBatchLogEvents>50</maxBatchLogEvents>
-                <maxFlushTimeMillis>30000</maxFlushTimeMillis>
-                <logRegion>${awsRegion}</logRegion>
-                <accessKeyId>${awsAccessKey}</accessKeyId>
-                <secretAccessKey>${awsSecretKey}</secretAccessKey>
-            </appender>
-            <timeout>3900000</timeout>
-        </sift>
-    </appender>
+    <appender name="CLOUD_WATCH_LOGS" class="com.arplanets.corexrapi.livesight.log.QueueingAppender"></appender>
+
 
     <!-- 開發環境 -->
     <springProfile name="dev">
@@ -139,7 +111,6 @@
             <appender-ref ref="INFO_FILE"/>
             <appender-ref ref="ERROR_FILE"/>
             <appender-ref ref="WARN_FILE"/>
-            <appender-ref ref="SIFT_AWS_LOGS"/>
         </root>
     </springProfile>
 
@@ -147,7 +118,7 @@
     <springProfile name="test">
         <root level="info">
             <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="SIFT_AWS_LOGS"/>
+            <appender-ref ref="CLOUD_WATCH_LOGS"/>
         </root>
     </springProfile>
 
@@ -155,7 +126,7 @@
     <springProfile name="prod">
         <root level="info">
             <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="SIFT_AWS_LOGS"/>
+            <appender-ref ref="CLOUD_WATCH_LOGS"/>
         </root>
     </springProfile>
 </configuration>

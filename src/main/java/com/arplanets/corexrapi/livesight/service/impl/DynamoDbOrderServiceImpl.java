@@ -36,6 +36,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -54,7 +56,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     @Value("${order.redeem-code.expiration-minutes}")
     private long redeemCodeExpirationMinutes;
 
-    private static final ZoneId ZONE_ID = ZoneId.of("Asia/Taipei");
+    public static final ZoneId ZONE_ID = ZoneId.of("Asia/Taipei");
     public static final String LIVE_SIGHT_NAME = "livesight";
     public static final String ORDER_PREFIX = "order";
     private static final int DEFAULT_PAGE_SIZE = 10;
@@ -132,9 +134,6 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         // 取得 Live Sight ID
         String liveSightId = extractUuid(namespace);
 
-        // 驗證 Live Sight ID
-        validateLiveSight(liveSightId);
-
         // 驗證 Org ID
         validateOrg(orgId, liveSightId);
 
@@ -161,11 +160,15 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         // 產生當下時間
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
+        // 產生過期時間
+        LocalDate tomorrow = now.toLocalDate().plusDays(1);
+        ZonedDateTime expireTime = ZonedDateTime.of(tomorrow, LocalTime.MIDNIGHT, ZONE_ID);
+
         // 產生 Access Token
-        String accessToken = orderJwtManager.genAccessToken(orderId, productId, now);
+        String accessToken = orderJwtManager.genAccessToken(orderId, productId, now, expireTime);
 
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildRedeemedOrder(orderId, productId, redeemCode, accessToken, now));
+        OrderPo result = orderRepository.update(buildRedeemedOrder(orderId, productId, redeemCode, accessToken, now, expireTime));
 
         // 將訂單資料暫存以做 Audit Log
         setResponseContext(request, result);
@@ -178,9 +181,6 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     public OrderDto voidOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId) {
         // 取得 Live Sight ID
         String liveSightId = extractUuid(namespace);
-
-        // 驗證 Live Sight ID
-        validateLiveSight(liveSightId);
 
         // 驗證 Org ID
         validateOrg(orgId, liveSightId);
@@ -203,9 +203,6 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     public PageResult<OrderDto> listOrder(String productId, String orgId, String namespace, ZonedDateTime startDate, ZonedDateTime endDate, PageRequest page) {
         // 取得 Live Sight ID
         String liveSightId = extractUuid(namespace);
-
-        // 驗證 Live Sight ID
-        validateLiveSight(liveSightId);
 
         // 驗證 Org ID
         validateOrg(orgId, liveSightId);
@@ -231,9 +228,6 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     public OrderDto returnOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId) {
         // 取得 Live Sight ID
         String liveSightId = extractUuid(namespace);
-
-        // 驗證 Live Sight ID
-        validateLiveSight(liveSightId);
 
         // 驗證 Org ID
         validateOrg(orgId, liveSightId);
@@ -324,11 +318,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
             throw new OrderApiException(OrderErrorCode._001);
         }
 
-        boolean idExist = liveSightService.isLiveSightExist(liveSightId);
-
-        if (!idExist) {
-            throw new OrderApiException(OrderErrorCode._002);
-        }
+        liveSightService.getLiveSight(liveSightId);
     }
 
     private void setResponseContext(HttpServletRequest request, OrderPo order) {
@@ -374,7 +364,10 @@ public class DynamoDbOrderServiceImpl implements OrderService {
             String verificationCode
     ) {
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
-        ZonedDateTime expiredAt = now.plusMinutes(expirationMinutes);
+
+        // 產生過期時間
+        LocalDate tomorrow = now.toLocalDate().plusDays(1);
+        ZonedDateTime expiredAt = ZonedDateTime.of(tomorrow, LocalTime.MIDNIGHT, ZONE_ID);
 
         return OrderPo.builder()
                 .orderId(orderId)
@@ -413,7 +406,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .build();
     }
 
-    private OrderPo buildRedeemedOrder(String orderId, String productId, String redeemCode, String accessToken, ZonedDateTime now) {
+    private OrderPo buildRedeemedOrder(String orderId, String productId, String redeemCode, String accessToken, ZonedDateTime now, ZonedDateTime expire) {
         return OrderPo.builder()
                 .orderId(orderId)
                 .productId(productId)
@@ -421,7 +414,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .redeemCode(redeemCode)
                 .redeemedAt(now)
                 .accessToken(accessToken)
-                .expiredAt(now.plusMinutes(jwtExpirationMinutes))
+                .expiredAt(expire)
                 .updatedAt(now)
                 .build();
     }

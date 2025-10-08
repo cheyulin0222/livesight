@@ -1,0 +1,13 @@
+@startuml
+class User {
+  -String name
+  -String email
+}
+
+class Order {
+  -int orderId
+  -Date orderDate
+}
+
+User "1" -- "0..*" Order : has
+@enduml

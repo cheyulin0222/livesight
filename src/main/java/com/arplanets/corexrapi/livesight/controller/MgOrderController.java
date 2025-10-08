@@ -13,7 +13,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,7 +32,8 @@ public class MgOrderController {
 
     @PostMapping(value = "/info", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "查詢訂單資訊", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<OrderInfoResponse> getOrderInfo(@RequestBody @Valid OrderInfoRequest request) {
+    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#request.orgId, #authentication)")
+    public ResponseEntity<OrderInfoResponse> getOrderInfo(@RequestBody @Valid OrderInfoRequest request, Authentication authentication) {
         OrderDto result = orderService.getOrder(
                 request.getProductId(),
                 request.getOrgId(),
@@ -42,6 +45,7 @@ public class MgOrderController {
 
     @PostMapping(value = "/list", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "查詢訂單列表", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#request.orgId, #authentication)")
     public ResponseEntity<PageResult<OrderListResponse>> listOrders(@RequestBody @Valid OrderListRequest request) {
 
         PageResult<OrderDto> result = orderService.listOrder(
@@ -58,28 +62,43 @@ public class MgOrderController {
 
     @PostMapping(value = "/activate", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "開通訂單", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#orderRequest.orgId, #authentication)")
     public ResponseEntity<OrderActivateResponse> activateOrder(@RequestBody @Valid OrderActivateRequest orderRequest, Authentication authentication, HttpServletRequest request) {
+
+        String username = null;
+
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            username = jwt.getClaimAsString("username");
+        }
+
         OrderDto result = orderService.activateOrder(
                 request,
                 orderRequest.getProductId(),
                 orderRequest.getOrgId(),
                 orderRequest.getNamespace(),
                 orderRequest.getOrderId(),
-                authentication.getName());
+                username);
 
         return ResponseEntity.ok(orderMapper.orderDtoToOrderActivateResponse(result));
     }
 
     @PostMapping(value = "/void", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "作廢訂單", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#orderRequest.orgId, #authentication)")
     public ResponseEntity<OrderVoidResponse> voidOrder(@RequestBody @Valid OrderVoidRequest orderRequest, Authentication authentication, HttpServletRequest request) {
+        String username = null;
+
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            username = jwt.getClaimAsString("username");
+        }
+
         OrderDto result = orderService.voidOrder(
                 request,
                 orderRequest.getProductId(),
                 orderRequest.getOrgId(),
                 orderRequest.getNamespace(),
                 orderRequest.getOrderId(),
-                authentication.getName());
+                username);
 
         return ResponseEntity.ok(orderMapper.orderDtoToOrderVoidResponse(result));
 
@@ -87,14 +106,21 @@ public class MgOrderController {
 
     @PostMapping(value = "/return", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "歸還訂單", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#orderRequest.orgId, #authentication)")
     public ResponseEntity<OrderReturnResponse> returnOrder(@RequestBody @Valid OrderReturnRequest orderRequest, Authentication authentication, HttpServletRequest request) {
+        String username = null;
+
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            username = jwt.getClaimAsString("username");
+        }
+
         OrderDto result = orderService.returnOrder(
                 request,
                 orderRequest.getProductId(),
                 orderRequest.getOrgId(),
                 orderRequest.getNamespace(),
                 orderRequest.getOrderId(),
-                authentication.getName()
+                username
         );
 
         return ResponseEntity.ok(orderMapper.orderDtoToOrderReturnResponse(result));

@@ -1,6 +1,7 @@
 package com.arplanets.corexrapi.livesight.advice;
 
 import com.arplanets.corexrapi.livesight.exception.OrderApiException;
+import com.arplanets.corexrapi.livesight.exception.PermissionDeniedException;
 import com.arplanets.corexrapi.livesight.exception.enums.ErrorType;
 import com.arplanets.corexrapi.livesight.log.ErrorContext;
 import com.arplanets.corexrapi.livesight.log.Logger;
@@ -31,8 +32,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import static com.arplanets.corexrapi.livesight.exception.enums.ErrorType.*;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.*;
 
 @RestControllerAdvice
 @Slf4j
@@ -95,6 +95,21 @@ public class ExceptionHandleAdvice {
 
         Logger.error(errorContext);
         return new ResponseEntity<>(new ErrorResponse(errorContext.getErrorMessage()), INTERNAL_SERVER_ERROR);
+
+    }
+
+    /**
+     * 處理 Service 層級的異常
+     */
+    @ExceptionHandler(PermissionDeniedException.class)
+    public ResponseEntity<ErrorResponse> handlePermissionDeniedException(HttpServletRequest request, PermissionDeniedException ex){
+        String errMsg = ex.getCode().message();
+
+        ErrorContext errorContext = buildErrorContext(AUTHORITY, FORBIDDEN, errMsg, ex);
+        setResponseContext(request, errorContext);
+
+        Logger.error(errorContext);
+        return new ResponseEntity<>(new ErrorResponse(errorContext.getErrorMessage()), FORBIDDEN);
 
     }
 

@@ -35,6 +35,9 @@ build/
 # 忽略 logs 目錄
 /logs/
 
+/docs/
+/out/
+
 # 忽略 application-dev.properties 文件
 application.properties
 application-dev.properties

@@ -22,9 +22,13 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+
+import static com.arplanets.corexrapi.livesight.service.impl.DynamoDbOrderServiceImpl.ZONE_ID;
 
 @Component
 @Slf4j
@@ -110,7 +114,7 @@ public class OrderJwtManager {
         return new JWKSet(jwk).toString();
     }
 
-    public String genAccessToken(String orderId, String productId, ZonedDateTime now) {
+    public String genAccessToken(String orderId, String productId, ZonedDateTime now, ZonedDateTime expire) {
         RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
         Algorithm algorithm = Algorithm.RSA256(null, privateKey);
 
@@ -119,7 +123,7 @@ public class OrderJwtManager {
                 .withSubject(orderId)
                 .withClaim("product_id", productId)
                 .withIssuedAt(now.toInstant())
-                .withExpiresAt(now.toInstant().plus(jwtExpirationMinutes, ChronoUnit.MINUTES))
+                .withExpiresAt(expire.toInstant())
                 .sign(algorithm);
     }
 

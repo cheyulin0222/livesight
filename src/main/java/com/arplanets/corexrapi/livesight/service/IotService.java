@@ -36,6 +36,7 @@ public class IotService {
 
         try {
             iotDataPlaneClient.publish(publishRequest);
+            log.info("Successfully sending async IoT message to topic:{}", topic);
         } catch (Exception e) {
             String message = "Failed to send async IoT message to topic: " + topic + " Error: " + e.getMessage();
             loggingService.errorByInitAPiMessage(logMessage, message, e);

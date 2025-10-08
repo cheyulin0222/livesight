@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -29,6 +30,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableWebSecurity
 @RequiredArgsConstructor
 @Slf4j
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final InitRequestContextFilter initRequestContextFilter;
@@ -57,6 +59,19 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
+    public SecurityFilterChain rootFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/")
+                .authorizeHttpRequests(authorize -> authorize
+                        .anyRequest().permitAll())
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(3)
     public SecurityFilterChain publicApiWithoutAuditFilterChain(HttpSecurity http) throws Exception {
         http
         .securityMatcher("/api/order/fetch_status", "/.well-known/jwks.json", "/api/auth/**")
@@ -70,7 +85,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(3)
+    @Order(4)
     public SecurityFilterChain mgApiWithoutAuditFilterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
         http
         .cors(withDefaults())
@@ -90,7 +105,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(4)
+    @Order(5)
     public SecurityFilterChain publicApiFilterChain(HttpSecurity http) throws Exception {
         http
         .securityMatcher("/api/order/**")
@@ -105,7 +120,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(5)
+    @Order(6)
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
         http
         .cors(withDefaults())
