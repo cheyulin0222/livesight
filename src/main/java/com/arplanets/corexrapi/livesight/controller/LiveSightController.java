@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/mg/api/live-sight")
+@RequestMapping("/live-sight/mg/api/live-sight")
 @RequiredArgsConstructor
 @Tag(name = "Live Sight API", description = "Live Sight API API")
 @Slf4j

@@ -8,14 +8,12 @@ import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Configuration
@@ -23,9 +21,6 @@ public class SwaggerConfig {
 
     @Value("${spring.application.name}")
     private String applicationName;
-
-    @Value("${server.servlet.context-path:}")
-    private String contextPath;
 
     @Bean
     public OpenAPI openAPI() {
@@ -50,8 +45,7 @@ public class SwaggerConfig {
                                 .name("Apache 2.0")
                                 .url("http:/springdoc.org")
                         )
-                )
-                .servers(List.of(new Server().url(contextPath)));
+                );
     }
 
     @Bean

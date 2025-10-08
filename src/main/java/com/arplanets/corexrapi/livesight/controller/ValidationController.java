@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/live-sight/api/auth")
 @RequiredArgsConstructor
 @Tag(name = "驗證", description = "驗證 API")
 public class ValidationController {

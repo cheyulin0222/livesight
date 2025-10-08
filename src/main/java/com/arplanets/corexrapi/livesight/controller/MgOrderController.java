@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/mg/api/order")
+@RequestMapping("/live-sight/mg/api/order")
 @RequiredArgsConstructor
 @Tag(name="(後台) 訂單 API", description = "(後台) 訂單 API")
 public class MgOrderController {

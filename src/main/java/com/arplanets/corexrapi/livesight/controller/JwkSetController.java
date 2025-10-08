@@ -15,7 +15,7 @@ public class JwkSetController {
 
     private final OrderJwtManager orderJwtManager;
 
-    @GetMapping(value = "/.well-known/jwks.json", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/live-sight/.well-known/jwks.json", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "獲取公開金鑰集（JWK Set）")
     public String jwkSet() {
         return orderJwtManager.getJwkSetJson();

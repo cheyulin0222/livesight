@@ -41,6 +41,9 @@ public class SecurityConfig {
     @Value("${order.access-token.trusted-issuers}")
     private List<String> trustedIssuers;
 
+    @Value("${server.servlet.custom.context-path:}")
+    private String contextPath;
+
 
 
     @Bean
@@ -74,7 +77,7 @@ public class SecurityConfig {
     @Order(3)
     public SecurityFilterChain publicApiWithoutAuditFilterChain(HttpSecurity http) throws Exception {
         http
-        .securityMatcher("/api/order/fetch_status", "/.well-known/jwks.json", "/api/auth/**")
+        .securityMatcher(contextPath + "/api/order/fetch_status", contextPath + "/.well-known/jwks.json", contextPath + "/api/auth/**")
         .authorizeHttpRequests(authorize -> authorize
                 .anyRequest().permitAll())
         .csrf(AbstractHttpConfigurer::disable)
@@ -89,7 +92,7 @@ public class SecurityConfig {
     public SecurityFilterChain mgApiWithoutAuditFilterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
         http
         .cors(withDefaults())
-        .securityMatcher("/mg/api/order/info", "/mg/api/order/list", "/mg/api/live-sight/**")
+        .securityMatcher(contextPath + "/mg/api/order/info", contextPath + "/mg/api/order/list", contextPath + "/mg/api/live-sight/**")
         .authorizeHttpRequests(authorize -> authorize
                 .anyRequest().authenticated())
         .csrf(AbstractHttpConfigurer::disable)
@@ -108,7 +111,7 @@ public class SecurityConfig {
     @Order(5)
     public SecurityFilterChain publicApiFilterChain(HttpSecurity http) throws Exception {
         http
-        .securityMatcher("/api/order/**")
+        .securityMatcher(contextPath + "/api/order/**")
         .authorizeHttpRequests(authorize -> authorize
                 .anyRequest().permitAll())
         .csrf(AbstractHttpConfigurer::disable)
