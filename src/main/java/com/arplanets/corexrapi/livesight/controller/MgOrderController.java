@@ -46,7 +46,7 @@ public class MgOrderController {
     @PostMapping(value = "/list", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "查詢訂單列表", security = @SecurityRequirement(name = "bearerAuth"))
     @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#request.orgId, #authentication)")
-    public ResponseEntity<PageResult<OrderListResponse>> listOrders(@RequestBody @Valid OrderListRequest request) {
+    public ResponseEntity<PageResult<OrderListResponse>> listOrders(@RequestBody @Valid OrderListRequest request, Authentication authentication) {
 
         PageResult<OrderDto> result = orderService.listOrder(
                 request.getProductId(),

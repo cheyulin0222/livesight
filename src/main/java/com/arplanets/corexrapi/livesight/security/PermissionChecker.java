@@ -26,7 +26,6 @@ public class PermissionChecker {
             uuid = jwt.getClaimAsString("username");
         }
 
-
         if (!StringUtils.hasText(uuid)) {
             throw new PermissionDeniedException(OrgMemberErrorCode._001);
         }
