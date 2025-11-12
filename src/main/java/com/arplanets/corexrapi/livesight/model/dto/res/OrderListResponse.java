@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -30,8 +31,13 @@ public class OrderListResponse {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
     @JsonProperty("created_at")
     private ZonedDateTime createdAt;
+    @Schema(description = "訂單開通者")
+    @JsonProperty("activated_by")
+    private String activatedBy;
     @Schema(description = "訂單過期時間")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
     @JsonProperty("expired_at")
     private ZonedDateTime expiredAt;
+    @Schema(description = "標籤", example = "[\"pr\"]")
+    private List<String> tags;
 }

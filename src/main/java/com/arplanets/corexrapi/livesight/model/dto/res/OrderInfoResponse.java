@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -65,6 +66,8 @@ public class OrderInfoResponse {
     @Schema(description = "訂單開通者")
     @JsonProperty("activated_by")
     private String activatedBy;
+    @Schema(description = "標籤", example = "[\"pr\"]")
+    private List<String> tags;
 
     @Schema(description = "訂單兌換時間")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")

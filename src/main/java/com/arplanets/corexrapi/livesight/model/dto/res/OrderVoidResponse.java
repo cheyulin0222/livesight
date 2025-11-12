@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Builder
 @AllArgsConstructor
@@ -34,4 +35,6 @@ public class OrderVoidResponse {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
     @JsonProperty("expired_at")
     private ZonedDateTime expiredAt;
+    @Schema(description = "標籤", example = "[\"pr\"]")
+    private List<String> tags;
 }

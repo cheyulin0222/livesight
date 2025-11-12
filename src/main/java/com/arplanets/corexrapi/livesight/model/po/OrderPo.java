@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -35,6 +36,7 @@ public class OrderPo {
     private ZonedDateTime activatedAt;
     private String activatedBy;
     private String redeemCode;
+    private List<String> tags;
 
     private ZonedDateTime redeemedAt;
     private String accessToken;

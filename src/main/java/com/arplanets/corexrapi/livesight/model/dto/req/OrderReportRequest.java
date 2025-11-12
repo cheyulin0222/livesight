@@ -1,15 +1,13 @@
 package com.arplanets.corexrapi.livesight.model.dto.req;
 
-import com.arplanets.corexrapi.livesight.model.AllowedTags;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-import java.util.List;
 
 @Data
-public class OrderActivateRequest {
+public class OrderReportRequest {
 
     @Schema(description = "產品 ID", example = "corexr")
     @NotBlank(message = "product_id 不可為空")
@@ -25,12 +23,6 @@ public class OrderActivateRequest {
     @NotBlank(message = "namespace 不可為空")
     private String namespace;
 
-    @Schema(description = "訂單 ID", example = "order_0052cc4a-8cdf-4d5c-9aeb-b155bdb10369")
-    @NotBlank(message = "order_id 不可為空")
-    @JsonProperty("order_id")
-    private String orderId;
-
-    @Schema(description = "標籤", example = "[\"pr\"]")
-    @AllowedTags
-    private List<String> tags;
+    @Schema(description = "篩選條件")
+    private OrderFilterRequest filters;
 }

@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 import static com.arplanets.corexrapi.livesight.service.impl.DynamoDbOrderServiceImpl.ZONE_ID;
@@ -114,7 +115,7 @@ public class OrderJwtManager {
         return new JWKSet(jwk).toString();
     }
 
-    public String genAccessToken(String orderId, String productId, ZonedDateTime now, ZonedDateTime expire) {
+    public String genAccessToken(String orderId, String productId, List<String> tags, ZonedDateTime now, ZonedDateTime expire) {
         RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
         Algorithm algorithm = Algorithm.RSA256(null, privateKey);
 
@@ -122,6 +123,7 @@ public class OrderJwtManager {
                 .withIssuer(jwtIssuer)
                 .withSubject(orderId)
                 .withClaim("product_id", productId)
+                .withClaim("tags", tags)
                 .withIssuedAt(now.toInstant())
                 .withExpiresAt(expire.toInstant())
                 .sign(algorithm);

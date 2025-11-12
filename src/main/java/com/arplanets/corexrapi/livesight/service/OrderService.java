@@ -1,11 +1,14 @@
 package com.arplanets.corexrapi.livesight.service;
 
 import com.arplanets.corexrapi.livesight.model.dto.OrderDto;
+import com.arplanets.corexrapi.livesight.model.dto.req.OrderFilterRequest;
 import com.arplanets.corexrapi.livesight.model.dto.req.PageRequest;
 import com.arplanets.corexrapi.livesight.model.dto.res.PageResult;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
 
 public interface OrderService {
 
@@ -13,10 +16,11 @@ public interface OrderService {
     OrderDto getOrderStatus(String productId, String orderId, String salt);
     OrderDto getOrder(String productId, String orgId, String namespace, String orderId);
     OrderDto redeemOrder(HttpServletRequest request, String productId, String orderId, String redeemCode);
-    OrderDto activateOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId);
+    OrderDto activateOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, List<String> tags, String staffId);
     OrderDto voidOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId);
     OrderDto returnOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId);
     PageResult<OrderDto> listOrder(String productId, String orgId, String namespace, ZonedDateTime startDate, ZonedDateTime endDate, PageRequest page);
+    List<OrderDto> listOrder(String productId, String orgId, String namespace, OrderFilterRequest filters);
     void verifyToken(String accessToken);
 
 

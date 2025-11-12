@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Builder
 @AllArgsConstructor
@@ -30,4 +31,5 @@ public class OrderIotPayload {
     private ZonedDateTime expiredAt;
     @JsonProperty("redeem_code")
     private String redeemCode;
+    private List<String> tags;
 }

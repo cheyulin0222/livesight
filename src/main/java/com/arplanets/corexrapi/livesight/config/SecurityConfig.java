@@ -77,7 +77,7 @@ public class SecurityConfig {
     @Order(3)
     public SecurityFilterChain publicApiWithoutAuditFilterChain(HttpSecurity http) throws Exception {
         http
-        .securityMatcher(contextPath + "/api/order/fetch_status", contextPath + "/.well-known/jwks.json", contextPath + "/api/auth/**")
+        .securityMatcher(contextPath + "/api/order/fetch_status", contextPath + "/.well-known/jwks.json", contextPath + "/api/auth/**", contextPath + "/api/.well-known/jwks.json", contextPath + "/webhook")
         .authorizeHttpRequests(authorize -> authorize
                 .anyRequest().permitAll())
         .csrf(AbstractHttpConfigurer::disable)

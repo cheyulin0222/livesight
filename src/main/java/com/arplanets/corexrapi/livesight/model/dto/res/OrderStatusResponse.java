@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Builder
 @AllArgsConstructor
@@ -37,4 +38,6 @@ public class OrderStatusResponse {
     @Schema(description = "Redeem Code")
     @JsonProperty("redeem_code")
     private String redeemCode;
+    @Schema(description = "標籤", example = "[\"pr\"]")
+    private List<String> tags;
 }

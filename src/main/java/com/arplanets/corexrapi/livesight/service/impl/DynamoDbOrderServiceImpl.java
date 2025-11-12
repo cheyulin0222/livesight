@@ -11,6 +11,7 @@ import com.arplanets.corexrapi.livesight.model.ResponseContext;
 import com.arplanets.corexrapi.livesight.model.bo.OrderIotPayload;
 import com.arplanets.corexrapi.livesight.model.dto.LiveSightDto;
 import com.arplanets.corexrapi.livesight.model.dto.OrderDto;
+import com.arplanets.corexrapi.livesight.model.dto.req.OrderFilterRequest;
 import com.arplanets.corexrapi.livesight.model.dto.req.PageRequest;
 import com.arplanets.corexrapi.livesight.model.dto.res.PageResult;
 import com.arplanets.corexrapi.livesight.model.eunms.OrderStatus;
@@ -130,7 +131,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderDto activateOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId) {
+    public OrderDto activateOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, List<String> tags, String staffId) {
         // 取得 Live Sight ID
         String liveSightId = extractUuid(namespace);
 
@@ -141,7 +142,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         String redeemCode = genRedeemCode();
 
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildActivatedOrder(orderId, productId, staffId, redeemCode));
+        OrderPo result = orderRepository.update(buildActivatedOrder(orderId, productId, staffId, redeemCode, tags));
 
         // 非同步將訂單資訊傳到 Iot
         iotService.sendIotRequest(buildTopicPath(result), buildPayload(result), loggingService.initApiMessage(result.getOrderId()));
@@ -164,8 +165,11 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         LocalDate tomorrow = now.toLocalDate().plusDays(1);
         ZonedDateTime expireTime = ZonedDateTime.of(tomorrow, LocalTime.MIDNIGHT, ZONE_ID);
 
+        // 為了取得 tags
+        OrderPo order = findOrThrowByOrderId(orderId);
+
         // 產生 Access Token
-        String accessToken = orderJwtManager.genAccessToken(orderId, productId, now, expireTime);
+        String accessToken = orderJwtManager.genAccessToken(orderId, productId, order.getTags(), now, expireTime);
 
         // 修改訂單資料
         OrderPo result = orderRepository.update(buildRedeemedOrder(orderId, productId, redeemCode, accessToken, now, expireTime));
@@ -222,6 +226,19 @@ public class DynamoDbOrderServiceImpl implements OrderService {
 
         // 回傳訂單資訊
         return orderPoPageResult.mapItems(orderMapper::orderPoToOrderDto);
+    }
+
+    @Override
+    public List<OrderDto> listOrder(String productId, String orgId, String namespace, OrderFilterRequest filters) {
+        // 取得 Live Sight ID
+        String liveSightId = extractUuid(namespace);
+
+        // 驗證 Org ID
+        validateOrg(orgId, liveSightId);
+
+        List<OrderPo> result = orderRepository.listByServiceTypeId(liveSightId, filters);
+
+        return result.stream().map(orderMapper::orderPoToOrderDto).toList();
     }
 
     @Override
@@ -390,7 +407,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     }
 
 
-    private OrderPo buildActivatedOrder(String orderId, String productId, String staffId, String redeemCode) {
+    private OrderPo buildActivatedOrder(String orderId, String productId, String staffId, String redeemCode, List<String> tags) {
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
         ZonedDateTime expiredAt = now.plusMinutes(redeemCodeExpirationMinutes);
 
@@ -401,6 +418,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .activatedAt(now)
                 .activatedBy(staffId)
                 .redeemCode(redeemCode)
+                .tags(tags)
                 .expiredAt(expiredAt)
                 .updatedAt(now)
                 .build();

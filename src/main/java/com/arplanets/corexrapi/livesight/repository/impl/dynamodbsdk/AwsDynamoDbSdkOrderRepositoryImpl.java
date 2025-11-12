@@ -2,11 +2,14 @@ package com.arplanets.corexrapi.livesight.repository.impl.dynamodbsdk;
 
 import com.arplanets.corexrapi.livesight.exception.OrderApiException;
 import com.arplanets.corexrapi.livesight.exception.enums.OrderErrorCode;
+import com.arplanets.corexrapi.livesight.model.dto.req.DateRangeRequest;
+import com.arplanets.corexrapi.livesight.model.dto.req.OrderFilterRequest;
 import com.arplanets.corexrapi.livesight.model.dto.res.PageResult;
 import com.arplanets.corexrapi.livesight.model.eunms.OrderStatus;
 import com.arplanets.corexrapi.livesight.model.po.OrderPo;
 import com.arplanets.corexrapi.livesight.repository.OrderRepository;
 import com.arplanets.commons.utils.DateTimeConverter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,6 +23,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -119,6 +123,7 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
                     .activatedAt(item.get("activated_at") != null ? DateTimeConverter.fromFormattedString(item.get("activated_at").s()) : null)
                     .activatedBy(item.get("activated_by") != null ? item.get("activated_by").s() : null)
                     .redeemCode(item.get("redeem_code") != null ? item.get("redeem_code").s() : null)
+                    .tags(item.get("tags") != null ? mapAttributeValueListToStringList(item.get("tags").l()) : null)
                     .redeemedAt(item.get("redeemed_at") != null ? DateTimeConverter.fromFormattedString(item.get("redeemed_at").s()) : null)
                     .accessToken(item.get("access_token") != null ? item.get("access_token").s() : null)
                     .voidedAt(item.get("voided_at") != null ? DateTimeConverter.fromFormattedString(item.get("voided_at").s()) : null)
@@ -209,6 +214,18 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
                     expressionAttributeValues.put(":val_updated_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
         });
 
+        Optional.ofNullable(order.getTags()).ifPresent(tags -> {
+            List<AttributeValue> tagList = tags.stream()
+                    .filter(Objects::nonNull)
+                    .map(string -> AttributeValue.builder().s(string).build())
+                    .toList();
+
+            if (!tagList.isEmpty()) {
+                updateExpression.append("tags = :val_tags, ");
+                expressionAttributeValues.put(":val_tags", AttributeValue.builder().l(tagList).build());
+            }
+        });
+
         // 如果沒有任何欄位要更新，則直接返回，避免發送無效請求
         if (expressionAttributeValues.isEmpty()) {
             return order;
@@ -250,13 +267,6 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
             expressionAttributeValues.put(":expectedProductId", AttributeValue.builder().s(order.getProductId()).build());
         }
 
-        // 檢查 expressionAttributeValues 的值是否為 null，避免 AWS SDK 報錯
-        for (Map.Entry<String, AttributeValue> entry : expressionAttributeValues.entrySet()) {
-            if (entry.getValue() == null || entry.getValue().s() == null) {
-                throw new IllegalArgumentException("Expression attribute value for " + entry.getKey() + " cannot be null.");
-            }
-        }
-
         UpdateItemRequest updateItemRequest = UpdateItemRequest.builder()
                 .tableName(tableName)
                 .key(Map.of(PK_ATTRIBUTE_NAME, AttributeValue.builder().s(order.getOrderId()).build(),
@@ -291,15 +301,14 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
 
     @Override
     public PageResult<OrderPo> pageByServiceTypeId(String serviceTypeId, ZonedDateTime startDate, ZonedDateTime endDate, Integer pageSize, String lastEvaluatedKey) {
+        String keyConditionExpression = buildKeyCondition(startDate, endDate);
+        Map<String, AttributeValue> expressionAttributeValues = initAttributeValue(serviceTypeId, startDate, endDate);
+
         QueryRequest.Builder requestBuilder = QueryRequest.builder()
                 .tableName(tableName)
                 .indexName("service_type_id-created_at-index")
-                .keyConditionExpression("service_type_id = :service_type_id AND created_at BETWEEN :start_date AND :end_date")
-                .expressionAttributeValues(Map.of(
-                        ":service_type_id", AttributeValue.builder().s(serviceTypeId).build(),
-                        ":start_date", AttributeValue.builder().s(DateTimeConverter.toFormattedString(startDate)).build(),
-                        ":end_date", AttributeValue.builder().s(DateTimeConverter.toFormattedString(endDate)).build()
-                ))
+                .keyConditionExpression(keyConditionExpression)
+                .expressionAttributeValues(expressionAttributeValues)
                 .scanIndexForward(false)
                 // 取多一筆數量，為了判斷有沒有下一筆
                 .limit(pageSize + 1);
@@ -311,13 +320,7 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
             requestBuilder.exclusiveStartKey(lastEvaluatedKeyMap);
         }
 
-        QueryResponse response;
-        try {
-            response = dynamoDbClient.query(requestBuilder.build());
-        } catch (DynamoDbException e) {
-            log.error("查詢 DynamoDB 失敗: {}", e.getMessage());
-            throw new RuntimeException("查詢訂單列表失敗。", e);
-        }
+        QueryResponse response = sendQuery(requestBuilder.build());
 
         // 4. 處理查詢結果
         List<OrderPo> orders = response.items().stream()
@@ -342,6 +345,173 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
         return new PageResult<>(orders, nextExclusiveStartKey, hasNextPage);
     }
 
+    @Override
+    public List<OrderPo> listByServiceTypeId(String serviceTypeId, OrderFilterRequest filters) {
+        List<OrderPo> allOrders = new ArrayList<>();
+        boolean hasMorePage = true;
+
+        // 取得 start_date 和 end_date
+        ZonedDateTime startDate = filters.getCreatedAt() != null ? filters.getCreatedAt().getStartDate() : null;
+        ZonedDateTime endDate = filters.getCreatedAt() != null ? filters.getCreatedAt().getEndDate() : null;
+
+        // 使用 start_date 和 end_date 產生基本的高效查詢條件
+        String keyConditionExpression = buildKeyCondition(startDate, endDate);
+        Map<String, AttributeValue> expressionAttributeValues = initAttributeValue(serviceTypeId, startDate, endDate);
+
+        // 產生額外查詢條件
+        Map<String, Object> filterParts = buildFilterExpression(filters);
+
+        // 取得額外條件
+        String filterExpression = (String) filterParts.get("expression");
+
+        // 取得所有參數名稱
+        @SuppressWarnings("unchecked")
+        Map<String, String> expressionAttributeNames = (Map<String, String>) filterParts.get("names");
+
+        // 取得所有的參數值
+        @SuppressWarnings("unchecked")
+        Map<String, AttributeValue> filterExpressionValues = (Map<String, AttributeValue>) filterParts.get("values");
+        expressionAttributeValues.putAll(filterExpressionValues);
+
+        Map<String, AttributeValue> exclusiveStartKey = null;
+
+        while (hasMorePage) {
+            QueryRequest.Builder requestBuilder = QueryRequest.builder()
+                    .tableName(tableName)
+                    .indexName("service_type_id-created_at-index")
+                    .keyConditionExpression(keyConditionExpression)
+                    .expressionAttributeValues(expressionAttributeValues)
+                    .scanIndexForward(false)
+                    .limit(1000);
+
+            // 設定起始索引
+            if (exclusiveStartKey != null && !exclusiveStartKey.isEmpty()) {
+                requestBuilder.exclusiveStartKey(exclusiveStartKey);
+            }
+
+            // 設定所有額外的參數名稱
+            if (!expressionAttributeNames.isEmpty()) {
+                requestBuilder.expressionAttributeNames(expressionAttributeNames);
+            }
+
+            // 設定額外查詢條件
+            if (!filterExpression.isEmpty()) {
+                requestBuilder.filterExpression(filterExpression);
+            }
+
+            // 送出查詢
+            QueryResponse response = sendQuery(requestBuilder.build());
+
+            // 取得結果
+            List<OrderPo> currentOrders = response.items().stream()
+                    .map(this::mapToOrderPo)
+                    .toList();
+
+            // 加入最終結果
+            allOrders.addAll(currentOrders);
+
+            // 設定是否要繼續查詢
+            if (response.lastEvaluatedKey() != null && !response.lastEvaluatedKey().isEmpty()) {
+                exclusiveStartKey = response.lastEvaluatedKey();
+            } else {
+                hasMorePage = false;
+            }
+        }
+
+
+        return allOrders;
+    }
+
+    private String buildKeyCondition(ZonedDateTime startDate, ZonedDateTime endDate) {
+        String keyConditionExpression = "service_type_id = :service_type_id";
+
+        if (startDate != null && endDate != null && endDate.isAfter(startDate)) {
+            keyConditionExpression += " AND created_at BETWEEN :start_date AND :end_date";
+        } else if (startDate != null) {
+            keyConditionExpression += " AND created_at >= :start_date";
+        } else if (endDate != null) {
+            keyConditionExpression += " AND created_at <= :end_date";
+        }
+
+        return keyConditionExpression;
+    }
+
+    private QueryResponse sendQuery(QueryRequest request) {
+        try {
+            return dynamoDbClient.query(request);
+        } catch (DynamoDbException e) {
+            log.error("查詢 DynamoDB 失敗: {}", e.getMessage());
+            throw new RuntimeException("查詢訂單列表失敗。", e);
+        }
+    }
+
+    private Map<String, Object> buildFilterExpression(OrderFilterRequest filters) {
+        if (filters == null) {
+            return Map.of("expression", "", "names", Map.of(), "values", Map.of());
+        }
+
+        ExpressionContext context = new ExpressionContext();
+
+        Class<? extends OrderFilterRequest> clazz = filters.getClass();
+
+        for (Field field : clazz.getDeclaredFields()) {
+            try {
+                field.setAccessible(true);
+
+                Object fieldValue = field.get(filters);
+
+                String fieldName = getJsonFieldName(field);
+
+                if ("created_at".equals(fieldName)) continue;
+
+                if (fieldValue instanceof DateRangeRequest range) {
+                    handleDateRange(context, fieldName, range);
+                } else if ("tags".equals(fieldName) && fieldValue instanceof List) {
+                    handleTags(context, fieldName, (List<?>) fieldValue);
+                } else if (fieldValue != null) {
+                    handleSingleValue(context, fieldName, fieldValue);
+                }
+            } catch (IllegalAccessException e) {
+                log.error("無法訪問屬性: {}", e.getMessage());
+            } finally {
+                field.setAccessible(false);
+            }
+        }
+
+        return Map.of(
+                "expression", context.expressionBuilder.toString(),
+                "names", context.expressionAttributeNames,
+                "values", context.expressionAttributeValues
+        );
+
+    }
+
+    private String getJsonFieldName(Field field) {
+        if (field.isAnnotationPresent(JsonProperty.class)) {
+            String jsonName = field.getAnnotation(JsonProperty.class).value();
+            if (!jsonName.isEmpty()) {
+                return jsonName;
+            }
+        }
+        return field.getName();
+    }
+
+    private Map<String, AttributeValue> initAttributeValue(String serviceTypeId, ZonedDateTime startDate, ZonedDateTime endDate) {
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+        expressionAttributeValues.put(":service_type_id", AttributeValue.builder().s(serviceTypeId).build());
+
+        if (startDate != null && endDate != null && endDate.isAfter(startDate)) {
+            expressionAttributeValues.put(":start_date", AttributeValue.builder().s(DateTimeConverter.toFormattedString(startDate)).build());
+            expressionAttributeValues.put(":end_date", AttributeValue.builder().s(DateTimeConverter.toFormattedString(endDate)).build());
+        } else if (startDate != null) {
+            expressionAttributeValues.put(":start_date", AttributeValue.builder().s(DateTimeConverter.toFormattedString(startDate)).build());
+        } else if (endDate != null) {
+            expressionAttributeValues.put(":end_date", AttributeValue.builder().s(DateTimeConverter.toFormattedString(endDate)).build());
+        }
+
+        return expressionAttributeValues;
+    }
+
     private OrderPo mapToOrderPo(Map<String, AttributeValue> item) {
         return OrderPo.builder()
                 .orderId(Optional.ofNullable(item.get("order_id")).map(AttributeValue::s).orElse(null))
@@ -360,6 +530,7 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
                 .activatedAt(item.get("activated_at") != null ? DateTimeConverter.fromFormattedString(item.get("activated_at").s()) : null)
                 .activatedBy(item.get("activated_by") != null ? item.get("activated_by").s() : null)
                 .redeemCode(item.get("redeem_code") != null ? item.get("redeem_code").s() : null)
+                .tags(item.get("tags") != null ? mapAttributeValueListToStringList(item.get("tags").l()) : null)
                 .redeemedAt(item.get("redeemed_at") != null ? DateTimeConverter.fromFormattedString(item.get("redeemed_at").s()) : null)
                 .accessToken(item.get("access_token") != null ? item.get("access_token").s() : null)
                 .voidedAt(item.get("voided_at") != null ? DateTimeConverter.fromFormattedString(item.get("voided_at").s()) : null)
@@ -370,6 +541,15 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
                 .updatedAt(item.get("updated_at") != null ? DateTimeConverter.fromFormattedString(item.get("updated_at").s()) : null)
                 .ttl(item.get("TTL") != null ? DateTimeConverter.fromEpochSecondToZonedDateTime(item.get("TTL").n()) : null)
                 .build();
+    }
+
+    private List<String> mapAttributeValueListToStringList(List<AttributeValue> avList) {
+        if (avList == null) {
+            return null;
+        }
+        return avList.stream()
+                .map(AttributeValue::s)
+                .collect(Collectors.toList());
     }
 
     private Map<String, AttributeValue> deserializeKey(String lastEvaluatedKey) {
@@ -531,6 +711,123 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
         }
 
         return keyMap;
+    }
+
+    private void handleDateRange(ExpressionContext context, String fieldName, DateRangeRequest range) {
+        ZonedDateTime start = range.getStartDate();
+        ZonedDateTime end = range.getEndDate();
+
+        if (start == null && end == null) return;
+
+        String nameAlias = "#" + fieldName + context.index;
+        String startAlias = ":" + fieldName + "Start" + context.index;
+        String endAlias = ":" + fieldName + "End" + context.index;
+
+        String expression;
+
+        if (start != null && end != null) {
+            expression = nameAlias + " BETWEEN " + startAlias + " AND " + endAlias;
+            context.expressionAttributeValues.put(startAlias, AttributeValue.builder().s(DateTimeConverter.toFormattedString(start)).build());
+            context.expressionAttributeValues.put(endAlias, AttributeValue.builder().s(DateTimeConverter.toFormattedString(end)).build());
+        } else if (start != null) {
+            expression = nameAlias + " >= " + startAlias;
+            context.expressionAttributeValues.put(startAlias, AttributeValue.builder().s(DateTimeConverter.toFormattedString(start)).build());
+        } else { // end != null
+            expression = nameAlias + " <= " + endAlias;
+            context.expressionAttributeValues.put(endAlias, AttributeValue.builder().s(DateTimeConverter.toFormattedString(end)).build());
+        }
+
+        if (!context.expressionBuilder.isEmpty()) {
+            context.expressionBuilder.append(" AND ");
+        }
+
+        context.expressionBuilder.append(expression);
+        context.expressionAttributeNames.put(nameAlias, fieldName);
+        context.index++;
+
+    }
+
+    private void handleTags(ExpressionContext context, String fieldName, List<?> rawList) {
+        if (rawList.isEmpty() || !(rawList.get(0) instanceof String)) {
+            return;
+        }
+
+        @SuppressWarnings("unchecked")
+        List<String> tagList = (List<String>) rawList;
+
+        String nameAlias = "#" + fieldName + context.index;
+        context.expressionAttributeNames.put(nameAlias, fieldName);
+
+        // 2. 構建 tags 的子表達式
+        StringBuilder tagsSubExpression = new StringBuilder();
+        int innerIndex = 0;
+
+        for (String tag : tagList) {
+            String tagValueAlias = ":" + fieldName + "Val" + context.index + "_" + innerIndex;
+
+            if (!tagsSubExpression.isEmpty()) {
+                tagsSubExpression.append(" AND ");
+            }
+
+            // 語法：contains(#tags5, :tagsVal5_0)
+            tagsSubExpression.append("contains(").append(nameAlias).append(", ").append(tagValueAlias).append(")");
+
+            context.expressionAttributeValues.put(tagValueAlias, AttributeValue.builder().s(tag).build());
+            innerIndex++;
+        }
+
+        // 3. 加入主表達式
+        if (!context.expressionBuilder.isEmpty()) {
+            context.expressionBuilder.append(" AND ");
+        }
+        context.expressionBuilder.append("(").append(tagsSubExpression).append(")");
+
+        context.index++;
+
+    }
+
+    private void handleSingleValue(ExpressionContext context, String fieldName, Object fieldValue) {
+        if (fieldValue instanceof String s && s.isBlank()) {
+            return;
+        }
+
+        String nameAlias = "#" + fieldName + context.index;
+        String valueAlias = ":" + fieldName + "Val" + context.index;
+        AttributeValue value = null;
+
+        if (fieldValue instanceof String s) {
+            value = AttributeValue.builder().s(s).build();
+        } else if (fieldValue instanceof OrderStatus status) {
+            value = AttributeValue.builder().s(status.name()).build();
+        } else if (fieldValue instanceof Number) {
+            value = AttributeValue.builder().n(fieldValue.toString()).build();
+        } else if (fieldValue instanceof Boolean) {
+            value = AttributeValue.builder().bool((Boolean) fieldValue).build();
+        }
+
+        if (value != null) {
+            String expression = nameAlias + " = " + valueAlias;
+            context.appendCondition(nameAlias, fieldName, expression, value, valueAlias);
+        }
+
+    }
+
+    private static class ExpressionContext {
+        StringBuilder expressionBuilder = new StringBuilder();
+        Map<String, String> expressionAttributeNames = new HashMap<>();
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+        int index = 0;
+
+        // 封裝 AND 連接和 index 遞增邏輯
+        private void appendCondition(String nameAlias, String fieldName, String expression, AttributeValue value, String valueAlias) {
+            if (!expressionBuilder.isEmpty()) {
+                expressionBuilder.append(" AND ");
+            }
+            expressionBuilder.append(expression);
+            expressionAttributeNames.put(nameAlias, fieldName);
+            expressionAttributeValues.put(valueAlias, value);
+            index++;
+        }
     }
 
 }

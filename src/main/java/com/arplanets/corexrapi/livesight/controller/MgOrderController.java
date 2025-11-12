@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,10 +22,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/live-sight/mg/api/order")
 @RequiredArgsConstructor
 @Tag(name="(後台) 訂單 API", description = "(後台) 訂單 API")
+@Slf4j
 public class MgOrderController {
 
     private final OrderMapper orderMapper;
@@ -60,6 +64,21 @@ public class MgOrderController {
 
     }
 
+    @PostMapping(value = "/reports", produces = {MediaType.APPLICATION_JSON_VALUE})
+    @Operation(summary = "匯出訂單列表", security = @SecurityRequirement(name = "bearerAuth"))
+    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#request.orgId, #authentication)")
+    public ResponseEntity<List<OrderListResponse>> getOrderReport(@RequestBody @Valid OrderReportRequest request, Authentication authentication) {
+
+        List<OrderDto> result = orderService.listOrder(
+                request.getProductId(),
+                request.getOrgId(),
+                request.getNamespace(),
+                request.getFilters());
+
+        return ResponseEntity.ok(result.stream().map(orderMapper::orderDtoToOrderListResponse).toList());
+
+    }
+
     @PostMapping(value = "/activate", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "開通訂單", security = @SecurityRequirement(name = "bearerAuth"))
     @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#orderRequest.orgId, #authentication)")
@@ -77,6 +96,7 @@ public class MgOrderController {
                 orderRequest.getOrgId(),
                 orderRequest.getNamespace(),
                 orderRequest.getOrderId(),
+                orderRequest.getTags(),
                 username);
 
         return ResponseEntity.ok(orderMapper.orderDtoToOrderActivateResponse(result));
