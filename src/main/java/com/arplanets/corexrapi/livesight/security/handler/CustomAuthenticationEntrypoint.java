@@ -1,6 +1,6 @@
 package com.arplanets.corexrapi.livesight.security.handler;
 
-import com.arplanets.corexrapi.livesight.advice.ExceptionHandleAdvice;
+import com.arplanets.corexrapi.base.advice.ExceptionHandleAdvice;
 import com.arplanets.corexrapi.livesight.log.ErrorContext;
 import com.arplanets.corexrapi.livesight.log.Logger;
 import com.arplanets.corexrapi.livesight.model.dto.res.ErrorResponse;

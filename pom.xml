@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.arplanets</groupId>
-	<artifactId>LiveSight</artifactId>
+	<artifactId>corexrapi</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>LiveSight</name>
-	<description>Demo project for Spring Boot</description>
+	<name>CoreXR API</name>
+	<description>CoreXR API project for Spring Boot</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -66,10 +66,6 @@
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>cloudwatchlogs</artifactId>
 		</dependency>
-<!--		<dependency>-->
-<!--			<groupId>software.amazon.awssdk</groupId>-->
-<!--			<artifactId>url-connection-client</artifactId>-->
-<!--		</dependency>-->
 
 		<dependency>
 			<groupId>ca.pjer</groupId>
