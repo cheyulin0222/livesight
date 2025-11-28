@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +33,7 @@ public class ApiOrderController {
 
     @PostMapping(value = "/create", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "建立訂單")
+    @PreAuthorize("@permissionChecker.checkOrderCreatePermission(#orderRequest.namespace)")
     public ResponseEntity<OrderCreateResponse> createOrder(@RequestBody @Valid OrderCreateRequest orderRequest, HttpServletRequest request) {
         OrderDto result = orderService.createOrder(
                 request,

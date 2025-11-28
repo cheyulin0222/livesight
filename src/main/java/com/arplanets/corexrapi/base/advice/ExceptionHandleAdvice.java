@@ -5,7 +5,7 @@ import com.arplanets.corexrapi.livesight.exception.PermissionDeniedException;
 import com.arplanets.corexrapi.livesight.exception.enums.ErrorType;
 import com.arplanets.corexrapi.livesight.log.ErrorContext;
 import com.arplanets.corexrapi.livesight.log.Logger;
-import com.arplanets.corexrapi.livesight.model.ResponseContext;
+import com.arplanets.corexrapi.livesight.model.dto.ResponseContext;
 import com.arplanets.corexrapi.livesight.model.dto.res.ErrorResponse;
 import com.arplanets.commons.utils.ClassUtil;
 import io.swagger.v3.oas.annotations.media.Schema;

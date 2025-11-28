@@ -5,9 +5,9 @@ import com.arplanets.corexrapi.livesight.exception.enums.OrderErrorCode;
 import com.arplanets.corexrapi.livesight.log.ErrorContext;
 import com.arplanets.corexrapi.livesight.log.Logger;
 import com.arplanets.corexrapi.livesight.log.LoggingService;
-import com.arplanets.corexrapi.livesight.model.ClientInfo;
+import com.arplanets.corexrapi.livesight.model.dto.ClientInfo;
 import com.arplanets.corexrapi.livesight.mapper.OrderMapper;
-import com.arplanets.corexrapi.livesight.model.ResponseContext;
+import com.arplanets.corexrapi.livesight.model.dto.ResponseContext;
 import com.arplanets.corexrapi.livesight.model.bo.OrderIotPayload;
 import com.arplanets.corexrapi.livesight.model.dto.LiveSightDto;
 import com.arplanets.corexrapi.livesight.model.dto.OrderDto;
@@ -72,12 +72,6 @@ public class DynamoDbOrderServiceImpl implements OrderService {
 
     @Override
     public OrderDto createOrder(HttpServletRequest request, String productId, String namespace, String authType, String authTypeId, String salt) {
-        // 取得 Live Sight ID
-        String liveSightId = extractUuid(namespace);
-
-        // 驗證 Live Sight ID
-        validateLiveSight(liveSightId);
-
         // 產生 Order ID
         String orderId = ORDER_PREFIX + "_" + UUID.randomUUID();
 
@@ -88,7 +82,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         ClientInfo clientInfo = ClientInfoUtil.getClientInfo(request);
 
         // 新增訂單資料
-        OrderPo result = orderRepository.create(buildCreatedOrder(orderId, namespace, productId, liveSightId, authType, authTypeId, clientInfo, verificationCode));
+        OrderPo result = orderRepository.create(buildCreatedOrder(orderId, namespace, productId, authType, authTypeId, clientInfo, verificationCode));
 
         // 將訂單資料暫存以做 Audit Log
         setResponseContext(request, result);
@@ -114,35 +108,25 @@ public class DynamoDbOrderServiceImpl implements OrderService {
 
     @Override
     public OrderDto getOrder(String productId, String orgId, String namespace, String orderId) {
-        // 取得 Live Sight ID
-        String liveSightId = extractUuid(namespace);
-
-        // 驗證 Org ID
-        validateOrg(orgId, liveSightId);
-
         // 取得訂單資訊，若無拋出錯誤
         OrderPo result = findOrThrowByOrderId(orderId);
 
-        // 驗證 Product ID
-        validateProductId(productId, result.getProductId());
+        // 驗證訂單是否為該 Live Sight
+        validateOrderInLiveSight(namespace, result);
 
         // 回傳訂單資訊
         return orderMapper.orderPoToOrderDto(result);
     }
 
+
+
     @Override
     public OrderDto activateOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, List<String> tags, String staffId) {
-        // 取得 Live Sight ID
-        String liveSightId = extractUuid(namespace);
-
-        // 驗證 Org ID
-        validateOrg(orgId, liveSightId);
-
         // 產生 Redeem Code
         String redeemCode = genRedeemCode();
 
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildActivatedOrder(orderId, productId, staffId, redeemCode, tags));
+        OrderPo result = orderRepository.update(buildActivatedOrder(orderId, namespace, productId, staffId, redeemCode, tags));
 
         // 非同步將訂單資訊傳到 Iot
         iotService.sendIotRequest(buildTopicPath(result), buildPayload(result), loggingService.initApiMessage(result.getOrderId()));
@@ -183,14 +167,8 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     }
 
     public OrderDto voidOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId) {
-        // 取得 Live Sight ID
-        String liveSightId = extractUuid(namespace);
-
-        // 驗證 Org ID
-        validateOrg(orgId, liveSightId);
-
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildVoidedOrder(orderId, productId, staffId));
+        OrderPo result = orderRepository.update(buildVoidedOrder(orderId, namespace, productId, staffId));
 
         // 將訂單資訊傳到 Iot
         iotService.sendIotRequest(buildTopicPath(result), buildPayload(result), loggingService.initApiMessage(result.getOrderId()));
@@ -200,16 +178,12 @@ public class DynamoDbOrderServiceImpl implements OrderService {
 
         // 回傳訂單資訊
         return orderMapper.orderPoToOrderDto(result);
-
     }
 
     @Override
     public PageResult<OrderDto> listOrder(String productId, String orgId, String namespace, ZonedDateTime startDate, ZonedDateTime endDate, PageRequest page) {
         // 取得 Live Sight ID
         String liveSightId = extractUuid(namespace);
-
-        // 驗證 Org ID
-        validateOrg(orgId, liveSightId);
 
         // 取得每頁資料數
         Integer pageSize = Optional.ofNullable(page)
@@ -243,14 +217,8 @@ public class DynamoDbOrderServiceImpl implements OrderService {
 
     @Override
     public OrderDto returnOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId) {
-        // 取得 Live Sight ID
-        String liveSightId = extractUuid(namespace);
-
-        // 驗證 Org ID
-        validateOrg(orgId, liveSightId);
-
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildReturnedOrder(orderId, productId, staffId));
+        OrderPo result = orderRepository.update(buildReturnedOrder(orderId, namespace, productId, staffId));
 
         // 將訂單資訊傳到 Iot
         iotService.sendIotRequest(buildTopicPath(result), buildPayload(result), loggingService.initApiMessage(result.getOrderId()));
@@ -330,14 +298,6 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         }
     }
 
-    private void validateLiveSight(String liveSightId) {
-        if (liveSightId == null || liveSightId.isBlank()) {
-            throw new OrderApiException(OrderErrorCode._001);
-        }
-
-        liveSightService.getLiveSight(liveSightId);
-    }
-
     private void setResponseContext(HttpServletRequest request, OrderPo order) {
         ResponseContext responseContext = ResponseContext.builder()
                 .order(orderMapper.orderPoToOrderContext(order))
@@ -374,7 +334,6 @@ public class DynamoDbOrderServiceImpl implements OrderService {
             String orderId,
             String namespace,
             String productId,
-            String liveSightId,
             String authType,
             String authTypeId,
             ClientInfo clientInfo,
@@ -392,7 +351,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .namespace(namespace)
                 .productId(productId)
                 .serviceType(LIVE_SIGHT_NAME)
-                .serviceTypeId(liveSightId)
+                .serviceTypeId(extractUuid(namespace))
                 .authType(authType)
                 .authTypeId(authTypeId)
                 .userBrowser(clientInfo.getBrowserName())
@@ -407,12 +366,13 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     }
 
 
-    private OrderPo buildActivatedOrder(String orderId, String productId, String staffId, String redeemCode, List<String> tags) {
+    private OrderPo buildActivatedOrder(String orderId, String namespace, String productId, String staffId, String redeemCode, List<String> tags) {
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
         ZonedDateTime expiredAt = now.plusMinutes(redeemCodeExpirationMinutes);
 
         return OrderPo.builder()
                 .orderId(orderId)
+                .namespace(namespace)
                 .productId(productId)
                 .orderStatus(OrderStatus.ACTIVATED)
                 .activatedAt(now)
@@ -437,11 +397,12 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .build();
     }
 
-    private OrderPo buildVoidedOrder(String orderId, String productId, String staffId) {
+    private OrderPo buildVoidedOrder(String orderId, String namespace, String productId, String staffId) {
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
         return OrderPo.builder()
                 .orderId(orderId)
+                .namespace(namespace)
                 .productId(productId)
                 .orderStatus(OrderStatus.VOIDED)
                 .voidedAt(now)
@@ -450,10 +411,11 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .build();
     }
 
-    private OrderPo buildReturnedOrder(String orderId, String productId, String staffId) {
+    private OrderPo buildReturnedOrder(String orderId, String namespace, String productId, String staffId) {
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
         return OrderPo.builder()
                 .orderId(orderId)
+                .namespace(namespace)
                 .productId(productId)
                 .orderStatus(OrderStatus.COMPLETED)
                 .returnedAt(now)
@@ -492,5 +454,11 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         }
 
         return payload;
+    }
+
+    private void validateOrderInLiveSight(String inputNamespace, OrderPo order) {
+        if (!inputNamespace.equals(order.getNamespace())) {
+            throw new OrderApiException(OrderErrorCode._021);
+        }
     }
 }

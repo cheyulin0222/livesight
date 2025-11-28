@@ -236,17 +236,21 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
 
         String conditionExpression = null;
         if (order.getOrderStatus() == OrderStatus.VOIDED) {
-            conditionExpression = "order_status <> :expectedStatus AND product_id = :expectedProductId AND attribute_exists(order_id)";
+            conditionExpression = "order_status <> :expectedStatus AND product_id = :expectedProductId AND namespace = :expectedNamespace AND attribute_exists(order_id)";
             // 驗證 status
             expressionAttributeValues.put(":expectedStatus", AttributeValue.builder().s(OrderStatus.VOIDED.name()).build());
             // 驗證 ProductId
             expressionAttributeValues.put(":expectedProductId", AttributeValue.builder().s(order.getProductId()).build());
+            // 驗證 namespace
+            expressionAttributeValues.put(":expectedNamespace", AttributeValue.builder().s(order.getNamespace()).build());
         } else if (order.getOrderStatus() == OrderStatus.ACTIVATED) {
-            conditionExpression = "order_status = :expectedStatus AND product_id = :expectedProductId AND expired_at > :now AND attribute_exists(order_id)";
+            conditionExpression = "order_status = :expectedStatus AND product_id = :expectedProductId AND namespace = :expectedNamespace AND expired_at > :now AND attribute_exists(order_id)";
             // 驗證 status
             expressionAttributeValues.put(":expectedStatus", AttributeValue.builder().s(OrderStatus.PENDING.name()).build());
             // 驗證 Product ID
             expressionAttributeValues.put(":expectedProductId", AttributeValue.builder().s(order.getProductId()).build());
+            // 驗證 namespace
+            expressionAttributeValues.put(":expectedNamespace", AttributeValue.builder().s(order.getNamespace()).build());
             // 驗證效期
             expressionAttributeValues.put(":now", AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getUpdatedAt())).build());
         } else if (order.getOrderStatus() == OrderStatus.REDEEMED) {
@@ -260,12 +264,15 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
             // 驗證效期
             expressionAttributeValues.put(":now", AttributeValue.builder().s(DateTimeConverter.toFormattedString(order.getUpdatedAt())).build());
         } else if (order.getOrderStatus() == OrderStatus.COMPLETED) {
-            conditionExpression = "order_status = :expectedStatus AND product_id = :expectedProductId AND attribute_exists(order_id)";
+            conditionExpression = "order_status = :expectedStatus AND product_id = :expectedProductId AND namespace = :expectedNamespace AND attribute_exists(order_id)";
             // 驗證 status
             expressionAttributeValues.put(":expectedStatus", AttributeValue.builder().s(OrderStatus.REDEEMED.name()).build());
             // 驗證 ProductId
             expressionAttributeValues.put(":expectedProductId", AttributeValue.builder().s(order.getProductId()).build());
+            // 驗證 namespace
+            expressionAttributeValues.put(":expectedNamespace", AttributeValue.builder().s(order.getNamespace()).build());
         }
+
 
         UpdateItemRequest updateItemRequest = UpdateItemRequest.builder()
                 .tableName(tableName)

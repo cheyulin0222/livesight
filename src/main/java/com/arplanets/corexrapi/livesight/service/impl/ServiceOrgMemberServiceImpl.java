@@ -9,9 +9,7 @@ import com.arplanets.corexrapi.livesight.repository.ServiceOrgMemberRepository;
 import com.arplanets.corexrapi.livesight.service.ServiceOrgMemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -35,14 +33,7 @@ public class ServiceOrgMemberServiceImpl implements ServiceOrgMemberService {
             throw new OrderApiException(ServiceOrgMemberErrorCode._001);
         }
 
-        return serviceOrgMemberMapper.orderPoToOrderDto(option.get());
+        return serviceOrgMemberMapper.serviceOrgMemberPoToServiceOrgMemberDto(option.get());
 
-    }
-
-    @Scheduled(fixedRate = 3600000) // 1 小時
-    @CacheEvict(value = ORG_MEMBER_CACHE, allEntries = true)
-    public void clearOrgMemberCache() {
-        // 方法被調用時，會自動清空緩存
-        // 方法體可以為空
     }
 }

@@ -36,7 +36,7 @@ public class MgOrderController {
 
     @PostMapping(value = "/info", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "查詢訂單資訊", security = @SecurityRequirement(name = "bearerAuth"))
-    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#request.orgId, #authentication)")
+    @PreAuthorize("@permissionChecker.checkOrderPermission(#request.orgId, #authentication, #request.namespace)")
     public ResponseEntity<OrderInfoResponse> getOrderInfo(@RequestBody @Valid OrderInfoRequest request, Authentication authentication) {
         OrderDto result = orderService.getOrder(
                 request.getProductId(),
@@ -49,7 +49,7 @@ public class MgOrderController {
 
     @PostMapping(value = "/list", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "查詢訂單列表", security = @SecurityRequirement(name = "bearerAuth"))
-    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#request.orgId, #authentication)")
+    @PreAuthorize("@permissionChecker.checkOrderPermission(#request.orgId, #authentication, #request.namespace)")
     public ResponseEntity<PageResult<OrderListResponse>> listOrders(@RequestBody @Valid OrderListRequest request, Authentication authentication) {
 
         PageResult<OrderDto> result = orderService.listOrder(
@@ -66,7 +66,7 @@ public class MgOrderController {
 
     @PostMapping(value = "/reports", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "匯出訂單列表", security = @SecurityRequirement(name = "bearerAuth"))
-    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#request.orgId, #authentication)")
+    @PreAuthorize("@permissionChecker.checkOrderPermission(#request.orgId, #authentication, #request.namespace)")
     public ResponseEntity<List<OrderListResponse>> getOrderReport(@RequestBody @Valid OrderReportRequest request, Authentication authentication) {
 
         List<OrderDto> result = orderService.listOrder(
@@ -81,7 +81,7 @@ public class MgOrderController {
 
     @PostMapping(value = "/activate", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "開通訂單", security = @SecurityRequirement(name = "bearerAuth"))
-    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#orderRequest.orgId, #authentication)")
+    @PreAuthorize("@permissionChecker.checkOrderPermission(#orderRequest.orgId, #authentication, #orderRequest.namespace)")
     public ResponseEntity<OrderActivateResponse> activateOrder(@RequestBody @Valid OrderActivateRequest orderRequest, Authentication authentication, HttpServletRequest request) {
 
         String username = null;
@@ -104,7 +104,7 @@ public class MgOrderController {
 
     @PostMapping(value = "/void", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "作廢訂單", security = @SecurityRequirement(name = "bearerAuth"))
-    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#orderRequest.orgId, #authentication)")
+    @PreAuthorize("@permissionChecker.checkOrderPermission(#orderRequest.orgId, #authentication, #orderRequest.namespace)")
     public ResponseEntity<OrderVoidResponse> voidOrder(@RequestBody @Valid OrderVoidRequest orderRequest, Authentication authentication, HttpServletRequest request) {
         String username = null;
 
@@ -126,7 +126,7 @@ public class MgOrderController {
 
     @PostMapping(value = "/return", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "歸還訂單", security = @SecurityRequirement(name = "bearerAuth"))
-    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#orderRequest.orgId, #authentication)")
+    @PreAuthorize("@permissionChecker.checkOrderPermission(#orderRequest.orgId, #authentication, #orderRequest.namespace)")
     public ResponseEntity<OrderReturnResponse> returnOrder(@RequestBody @Valid OrderReturnRequest orderRequest, Authentication authentication, HttpServletRequest request) {
         String username = null;
 

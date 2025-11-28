@@ -1,4 +1,4 @@
-package com.arplanets.corexrapi.livesight.model;
+package com.arplanets.corexrapi.livesight.model.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
@@ -8,16 +8,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ElementType.FIELD, ElementType.PARAMETER})
+@Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Constraint(validatedBy = AllowedTagsValidator.class)
-public @interface AllowedTags {
+@Constraint(validatedBy = NamespaceStartsWithProductIdValidator.class)
+public @interface NamespaceStartsWithProductId {
 
-    String message() default "One or more tags are invalid. Only 'pr' is allowed.";
-
-    // 必填屬性：組別
+    String message() default "namespace 必須以 product_id 開頭";
     Class<?>[] groups() default {};
-
-    // 必填屬性：負載 (Payload)
     Class<? extends Payload>[] payload() default {};
 }

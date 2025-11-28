@@ -9,9 +9,7 @@ import com.arplanets.corexrapi.livesight.repository.LiveSightRepository;
 import com.arplanets.corexrapi.livesight.service.LiveSightService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -47,18 +45,6 @@ public class DynamoDbLiveSightServiceImpl implements LiveSightService {
 
         return liveSightMapper.liveSightPoToLiveSightDto(liveSight);
     }
-
-    /**
-     * 定期清理整個 LiveSight 存在性緩存
-     * (需確保 Spring Boot 啟動類有 @EnableScheduling)
-     */
-    @Scheduled(fixedRate = 3600000) // 1 小時
-    @CacheEvict(value = LIVE_SIGHT_CACHE, allEntries = true)
-    public void clearLiveSightCache() {
-        // 方法被調用時，會自動清空緩存
-        // 方法體可以為空
-    }
-
 
     private LiveSightPo findOrThrowByLiveSightId(String liveSightId) {
         Optional<LiveSightPo> option = liveSightRepository.findById(liveSightId);

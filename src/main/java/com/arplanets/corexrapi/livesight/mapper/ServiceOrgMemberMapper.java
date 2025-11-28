@@ -7,5 +7,5 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface ServiceOrgMemberMapper {
 
-    ServiceOrgMemberDto orderPoToOrderDto(ServiceOrgMember serviceOrgMember);
+    ServiceOrgMemberDto serviceOrgMemberPoToServiceOrgMemberDto(ServiceOrgMember serviceOrgMember);
 }

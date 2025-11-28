@@ -1,6 +1,6 @@
 package com.arplanets.commons.utils;
 
-import com.arplanets.corexrapi.livesight.model.ClientInfo;
+import com.arplanets.corexrapi.livesight.model.dto.ClientInfo;
 import eu.bitwalker.useragentutils.*;
 import jakarta.servlet.http.HttpServletRequest;
 

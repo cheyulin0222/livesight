@@ -34,7 +34,7 @@ public class LiveSightController {
 
     @PostMapping(value = "/create", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "建立 Live Sight", security = @SecurityRequirement(name = "bearerAuth"))
-    @PreAuthorize("@permissionChecker.checkOrgMemberPermission(#request.orgId, #authentication)")
+    @PreAuthorize("@permissionChecker.checkLiveSightCreatePermission(#request.orgId, #authentication)")
     public ResponseEntity<LiveSightResponse> create(@RequestBody @Valid LiveSightCreateRequest request, Authentication authentication) {
 
         String username = null;

@@ -1,4 +1,4 @@
-package com.arplanets.corexrapi.livesight.model;
+package com.arplanets.corexrapi.livesight.model.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

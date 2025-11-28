@@ -1,4 +1,4 @@
-package com.arplanets.corexrapi.livesight.model;
+package com.arplanets.corexrapi.livesight.model.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;

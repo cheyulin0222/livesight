@@ -1,4 +1,4 @@
-package com.arplanets.corexrapi.livesight.model;
+package com.arplanets.corexrapi.livesight.model.dto;
 
 import com.arplanets.corexrapi.livesight.model.eunms.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;

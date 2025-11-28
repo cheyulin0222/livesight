@@ -3,12 +3,21 @@ package com.arplanets.corexrapi.livesight.model.dto.req;
 import com.arplanets.corexrapi.livesight.model.eunms.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class OrderFilterRequest {
+
+    @Schema(description = "namespace")
+    private String namespace;
 
     @Schema(description = "使用者瀏覽器")
     @JsonProperty("user_browser")

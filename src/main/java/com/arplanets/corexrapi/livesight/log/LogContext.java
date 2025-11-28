@@ -1,7 +1,7 @@
 package com.arplanets.corexrapi.livesight.log;
 
-import com.arplanets.corexrapi.livesight.model.RequestContext;
-import com.arplanets.corexrapi.livesight.model.ResponseContext;
+import com.arplanets.corexrapi.livesight.model.dto.RequestContext;
+import com.arplanets.corexrapi.livesight.model.dto.ResponseContext;
 import com.arplanets.commons.utils.ClientInfoUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

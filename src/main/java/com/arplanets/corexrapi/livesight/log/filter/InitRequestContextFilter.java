@@ -1,6 +1,6 @@
 package com.arplanets.corexrapi.livesight.log.filter;
 
-import com.arplanets.corexrapi.livesight.model.RequestContext;
+import com.arplanets.corexrapi.livesight.model.dto.RequestContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
