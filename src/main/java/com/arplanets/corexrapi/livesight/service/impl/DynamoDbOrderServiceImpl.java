@@ -153,7 +153,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         OrderPo order = findOrThrowByOrderId(orderId);
 
         // 產生 Access Token
-        String accessToken = orderJwtManager.genAccessToken(orderId, productId, order.getTags(), now, expireTime);
+        String accessToken = orderJwtManager.genAccessToken(order, now, expireTime);
 
         // 修改訂單資料
         OrderPo result = orderRepository.update(buildRedeemedOrder(orderId, productId, redeemCode, accessToken, now, expireTime));

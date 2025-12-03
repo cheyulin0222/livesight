@@ -1,5 +1,6 @@
 package com.arplanets.corexrapi.livesight.security.jwt;
 
+import com.arplanets.corexrapi.livesight.model.po.OrderPo;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -115,15 +116,19 @@ public class OrderJwtManager {
         return new JWKSet(jwk).toString();
     }
 
-    public String genAccessToken(String orderId, String productId, List<String> tags, ZonedDateTime now, ZonedDateTime expire) {
+    public String genAccessToken(OrderPo order, ZonedDateTime now, ZonedDateTime expire) {
         RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
         Algorithm algorithm = Algorithm.RSA256(null, privateKey);
 
         return JWT.create()
                 .withIssuer(jwtIssuer)
-                .withSubject(orderId)
-                .withClaim("product_id", productId)
-                .withClaim("tags", tags)
+                .withSubject(order.getOrderId())
+                .withClaim("product_id", order.getProductId())
+                .withClaim("auth_type", order.getAuthType())
+                .withClaim("auth_type_id", order.getAuthTypeId())
+                .withClaim("service_type", order.getServiceType())
+                .withClaim("service_type_id", order.getServiceTypeId())
+                .withClaim("tags", order.getTags())
                 .withIssuedAt(now.toInstant())
                 .withExpiresAt(expire.toInstant())
                 .sign(algorithm);
