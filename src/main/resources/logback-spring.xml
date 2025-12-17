@@ -100,7 +100,7 @@
         </filter>
     </appender>
 
-     AWS CloudWatch Appender
+    <!-- AWS CloudWatch Appender-->
     <appender name="CLOUD_WATCH_LOGS" class="com.arplanets.corexrapi.livesight.log.QueueingAppender"></appender>
 
 

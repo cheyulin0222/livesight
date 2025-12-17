@@ -4,7 +4,6 @@ import com.arplanets.corexrapi.livesight.exception.OrderApiException;
 import com.arplanets.corexrapi.livesight.exception.PermissionDeniedException;
 import com.arplanets.corexrapi.livesight.exception.enums.PermissionDeniedErrorCode;
 import com.arplanets.corexrapi.livesight.model.dto.LiveSightDto;
-import com.arplanets.corexrapi.livesight.repository.OrderRepository;
 import com.arplanets.corexrapi.livesight.service.LiveSightService;
 import com.arplanets.corexrapi.livesight.service.OrgService;
 import com.arplanets.corexrapi.livesight.service.ServiceOrgMemberService;
