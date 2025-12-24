@@ -12,7 +12,7 @@ import java.util.Map;
 
 public interface OrderService {
 
-    OrderDto createOrder(HttpServletRequest request, String productId, String namespace, String authType, String authTypeId, String salt);
+    OrderDto createOrder(HttpServletRequest request, String productId, String namespace, String authType, String authTypeId, String salt, String planId);
     OrderDto getOrderStatus(String productId, String orderId, String salt);
     OrderDto getOrder(String productId, String orgId, String namespace, String orderId);
     OrderDto redeemOrder(HttpServletRequest request, String productId, String orderId, String redeemCode);

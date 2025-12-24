@@ -50,3 +50,5 @@ application-prod.properties
 # Git 忽略檔案
 private_key.pem
 jwks.json
+
+*.pem

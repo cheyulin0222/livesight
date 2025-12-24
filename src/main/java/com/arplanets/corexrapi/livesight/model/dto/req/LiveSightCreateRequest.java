@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,4 +18,5 @@ public class LiveSightCreateRequest {
     @NotBlank(message = "org_id 不可為空")
     @JsonProperty("org_id")
     private String orgId;
+
 }

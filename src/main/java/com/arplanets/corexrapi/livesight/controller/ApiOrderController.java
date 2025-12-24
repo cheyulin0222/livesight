@@ -41,7 +41,8 @@ public class ApiOrderController {
                 orderRequest.getNamespace(),
                 orderRequest.getAuthType(),
                 orderRequest.getAuthTypeId(),
-                orderRequest.getSalt());
+                orderRequest.getSalt(),
+                orderRequest.getPlanId());
 
         return ResponseEntity.ok(orderMapper.orderDtoToOrderCreateResponse(result));
     }

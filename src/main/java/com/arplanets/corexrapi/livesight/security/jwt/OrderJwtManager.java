@@ -37,8 +37,6 @@ public class OrderJwtManager {
     private Resource privateKeyResource;
     @Value("${order.access-token.issuer}")
     private String jwtIssuer;
-    @Value("${order.access-token.expiration-minutes}")
-    private long jwtExpirationMinutes;
     @Value("${order.access-token.audience:}")
     private String jwtAudience;
 

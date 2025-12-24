@@ -4,7 +4,7 @@ import com.arplanets.corexrapi.livesight.exception.OrderApiException;
 import com.arplanets.corexrapi.livesight.exception.enums.LiveSightErrorCode;
 import com.arplanets.corexrapi.livesight.model.dto.LiveSightDto;
 import com.arplanets.corexrapi.livesight.model.dto.req.LiveSightCreateRequest;
-import com.arplanets.corexrapi.livesight.model.dto.res.LiveSightResponse;
+import com.arplanets.corexrapi.livesight.model.dto.res.LiveSightCreateResponse;
 import com.arplanets.corexrapi.livesight.service.LiveSightService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/live-sight/mg/api/live-sight")
 @RequiredArgsConstructor
-@Tag(name = "Live Sight API", description = "Live Sight API API")
+@Tag(name = "Live Sight API", description = "Live Sight API")
 @Slf4j
 public class LiveSightController {
 
@@ -35,7 +35,7 @@ public class LiveSightController {
     @PostMapping(value = "/create", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "建立 Live Sight", security = @SecurityRequirement(name = "bearerAuth"))
     @PreAuthorize("@permissionChecker.checkLiveSightCreatePermission(#request.orgId, #authentication)")
-    public ResponseEntity<LiveSightResponse> create(@RequestBody @Valid LiveSightCreateRequest request, Authentication authentication) {
+    public ResponseEntity<LiveSightCreateResponse> create(@RequestBody @Valid LiveSightCreateRequest request, Authentication authentication) {
 
         String username = null;
         if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
@@ -48,12 +48,8 @@ public class LiveSightController {
 
         LiveSightDto result = liveSightService.createLiveSight(request.getOrgId(), username);
 
-        LiveSightResponse response = LiveSightResponse.builder()
-                .serviceTypeId(result.getLiveSightId())
-                .build();
-
-        return ResponseEntity.ok(response);
-
-
+        return ResponseEntity.ok(LiveSightCreateResponse.builder()
+                        .serviceTypeId(result.getLiveSightId())
+                        .build());
     }
 }

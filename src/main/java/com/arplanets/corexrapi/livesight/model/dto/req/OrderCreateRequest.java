@@ -1,5 +1,6 @@
 package com.arplanets.corexrapi.livesight.model.dto.req;
 
+import com.arplanets.corexrapi.livesight.model.dto.Expiry;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -27,4 +28,10 @@ public class OrderCreateRequest extends OrderRequestBase{
     @Schema(description = "鹽值")
     @NotBlank(message = "salt 不可為空")
     private String salt;
+
+    @Schema(description = "方案 ID", example = "18fdc1e2-0d9b-456c-b15a-e5a4d8b4a120")
+    @JsonProperty("plan_id")
+    private String planId;
+
+
 }

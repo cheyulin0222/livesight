@@ -57,6 +57,11 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
         item.put("product_id", AttributeValue.builder().s(order.getProductId()).build());
         item.put("service_type", AttributeValue.builder().s(order.getServiceType()).build());
         item.put("service_type_id", AttributeValue.builder().s(order.getServiceTypeId()).build());
+
+        if (order.getPlanId() != null) {
+            item.put("plan_id", AttributeValue.builder().s(order.getPlanId()).build());
+        }
+
         // 訂單狀態
         item.put("order_status", AttributeValue.builder().s(order.getOrderStatus().name()).build());
         // 使用者資訊
@@ -209,11 +214,6 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
             expressionAttributeValues.put(":val_expired_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
         });
 
-        Optional.ofNullable(order.getUpdatedAt()).ifPresent(s -> {
-                    updateExpression.append("updated_at = :val_updated_at, ");
-                    expressionAttributeValues.put(":val_updated_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
-        });
-
         Optional.ofNullable(order.getTags()).ifPresent(tags -> {
             List<AttributeValue> tagList = tags.stream()
                     .filter(Objects::nonNull)
@@ -230,6 +230,11 @@ public class AwsDynamoDbSdkOrderRepositoryImpl implements OrderRepository {
         if (expressionAttributeValues.isEmpty()) {
             return order;
         }
+
+        Optional.ofNullable(order.getUpdatedAt()).ifPresent(s -> {
+            updateExpression.append("updated_at = :val_updated_at, ");
+            expressionAttributeValues.put(":val_updated_at", AttributeValue.builder().s(DateTimeConverter.toFormattedString(s)).build());
+        });
 
         // 移除 updateExpression 最後多出來的 ", "
         updateExpression.setLength(updateExpression.length() - 2);

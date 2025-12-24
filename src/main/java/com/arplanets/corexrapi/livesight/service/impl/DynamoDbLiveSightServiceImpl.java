@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,6 +22,7 @@ import java.util.UUID;
 @Slf4j
 public class DynamoDbLiveSightServiceImpl implements LiveSightService {
 
+    public static final ZoneId ZONE_ID = ZoneId.of("Asia/Taipei");
     private final LiveSightRepository liveSightRepository;
     private final LiveSightMapper liveSightMapper;
     private static final String LIVE_SIGHT_CACHE = "liveSightDetails";
@@ -28,9 +31,15 @@ public class DynamoDbLiveSightServiceImpl implements LiveSightService {
     public LiveSightDto createLiveSight(String orgId, String uuid) {
         String liveSightId = UUID.randomUUID().toString();
 
+        ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
+
         LiveSightPo liveSight = LiveSightPo.builder()
                 .liveSightId(liveSightId)
                 .orgId(orgId)
+                .createdAt(now)
+                .createdBy(uuid)
+                .updatedAt(now)
+                .updatedBy(uuid)
                 .build();
 
         liveSightRepository.create(liveSight);
@@ -51,7 +60,8 @@ public class DynamoDbLiveSightServiceImpl implements LiveSightService {
         if (option.isEmpty()) {
             throw new OrderApiException(LiveSightErrorCode._003);
         }
-
         return option.get();
     }
+
+
 }

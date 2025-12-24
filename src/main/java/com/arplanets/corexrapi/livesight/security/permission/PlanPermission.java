@@ -1,4 +1,4 @@
-package com.arplanets.corexrapi.livesight.security;
+package com.arplanets.corexrapi.livesight.security.permission;
 
 import com.arplanets.corexrapi.livesight.exception.OrderApiException;
 import com.arplanets.corexrapi.livesight.exception.PermissionDeniedException;
@@ -14,32 +14,16 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-
-
-@Component("permissionChecker")
+@Component("planPermissionChecker")
 @RequiredArgsConstructor
 @Slf4j
-public class PermissionChecker {
+public class PlanPermission {
 
-    private final ServiceOrgMemberService serviceOrgMemberService;
     private final OrgService orgService;
+    private final ServiceOrgMemberService serviceOrgMemberService;
     private final LiveSightService liveSightService;
-    public static final String LIVE_SIGHT_NAME = "livesight";
 
-    public boolean checkLiveSightCreatePermission(String orgId, Authentication authentication) {
-        // 驗證組織
-        validateOrg(orgId);
-
-        // 取得 UUID
-        String uuid = extractUuid(authentication);
-
-        // 驗證使用者是否在該組織
-        validateMemberInOrg(orgId, uuid);
-
-        return true;
-    }
-
-    public boolean checkLiveSightUpdatePermission(String orgId, String liveSightId, Authentication authentication) {
+    public boolean checkPlanCreatePermission(String orgId, String liveSightId, Authentication authentication) {
         // 驗證組織
         validateOrg(orgId);
 
@@ -58,7 +42,7 @@ public class PermissionChecker {
         return true;
     }
 
-    public boolean checkOrderPermission(String orgId, Authentication authentication, String namespace) {
+    public boolean checkPlanUpdatePermission(String orgId, String liveSightId, Authentication authentication) {
         // 驗證組織
         validateOrg(orgId);
 
@@ -68,10 +52,6 @@ public class PermissionChecker {
         // 驗證使用者是否在該組織
         validateMemberInOrg(orgId, uuid);
 
-        log.info("namespace={}", namespace);
-        String liveSightId = extractUuid(namespace);
-
-        log.info("liveSightId={}", liveSightId);
         // 驗證 Live Sight
         LiveSightDto liveSight = validateLiveSight(liveSightId);
 
@@ -81,16 +61,12 @@ public class PermissionChecker {
         return true;
     }
 
-    public boolean checkOrderCreatePermission(String namespace) {
-        String liveSightId = extractUuid(namespace);
-
-        // 驗證 Live Sight
-        LiveSightDto liveSight = validateLiveSight(liveSightId);
-
-        // 驗證組織
-        validateOrg(liveSight.getOrgId());
-
-        return true;
+    private void validateOrg(String orgId) {
+        try {
+            orgService.findByOrgId(orgId);
+        } catch (OrderApiException e) {
+            throw new PermissionDeniedException(PermissionDeniedErrorCode._001);
+        }
     }
 
     private String extractUuid(Authentication authentication) {
@@ -107,14 +83,6 @@ public class PermissionChecker {
         return uuid;
     }
 
-    private void validateOrg(String orgId) {
-        try {
-            orgService.findByOrgId(orgId);
-        } catch (OrderApiException e) {
-            throw new PermissionDeniedException(PermissionDeniedErrorCode._001);
-        }
-    }
-
     private void validateMemberInOrg(String orgId, String uuid) {
         try {
             serviceOrgMemberService.findByOrgIdAndUuid(orgId, uuid);
@@ -124,8 +92,6 @@ public class PermissionChecker {
     }
 
     private LiveSightDto validateLiveSight(String liveSightId) {
-
-
         if (!StringUtils.hasText(liveSightId)) {
             throw new PermissionDeniedException(PermissionDeniedErrorCode._004);
         }
@@ -141,27 +107,5 @@ public class PermissionChecker {
         if (!accessOrgId.equals(liveSight.getOrgId())) {
             throw new PermissionDeniedException(PermissionDeniedErrorCode._005);
         }
-    }
-
-    private String extractUuid(String namespace) {
-        if (namespace == null || namespace.isEmpty()) {
-            return null;
-        }
-
-        String[] parts = namespace.split("\\.");
-
-        int livesightIndex = -1;
-        for (int i = 0; i < parts.length; i++) {
-            if (LIVE_SIGHT_NAME.equals(parts[i])) {
-                livesightIndex = i;
-                break;
-            }
-        }
-
-        if (livesightIndex != -1 && livesightIndex + 1 < parts.length) {
-            return parts[livesightIndex + 1];
-        }
-
-        return null;
     }
 }

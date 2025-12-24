@@ -5,16 +5,15 @@ import com.arplanets.corexrapi.livesight.exception.enums.OrderErrorCode;
 import com.arplanets.corexrapi.livesight.log.ErrorContext;
 import com.arplanets.corexrapi.livesight.log.Logger;
 import com.arplanets.corexrapi.livesight.log.LoggingService;
-import com.arplanets.corexrapi.livesight.model.dto.ClientInfo;
+import com.arplanets.corexrapi.livesight.model.dto.*;
 import com.arplanets.corexrapi.livesight.mapper.OrderMapper;
-import com.arplanets.corexrapi.livesight.model.dto.ResponseContext;
 import com.arplanets.corexrapi.livesight.model.bo.OrderIotPayload;
-import com.arplanets.corexrapi.livesight.model.dto.LiveSightDto;
-import com.arplanets.corexrapi.livesight.model.dto.OrderDto;
 import com.arplanets.corexrapi.livesight.model.dto.req.OrderFilterRequest;
 import com.arplanets.corexrapi.livesight.model.dto.req.PageRequest;
 import com.arplanets.corexrapi.livesight.model.dto.res.PageResult;
+import com.arplanets.corexrapi.livesight.model.eunms.ExpireMode;
 import com.arplanets.corexrapi.livesight.model.eunms.OrderStatus;
+import com.arplanets.corexrapi.livesight.model.eunms.PeriodUnit;
 import com.arplanets.corexrapi.livesight.model.po.OrderPo;
 import com.arplanets.corexrapi.livesight.repository.OrderRepository;
 import com.arplanets.corexrapi.livesight.security.jwt.OrderJwtManager;
@@ -22,6 +21,7 @@ import com.arplanets.corexrapi.livesight.service.IotService;
 import com.arplanets.corexrapi.livesight.service.LiveSightService;
 import com.arplanets.corexrapi.livesight.service.OrderService;
 import com.arplanets.commons.utils.ClientInfoUtil;
+import com.arplanets.corexrapi.livesight.service.PlanService;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,10 +37,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -48,10 +48,6 @@ import java.util.*;
 @Slf4j
 public class DynamoDbOrderServiceImpl implements OrderService {
 
-    @Value("${order.create.expiration-minutes}")
-    private long expirationMinutes;
-    @Value("${order.access-token.expiration-minutes}")
-    private long jwtExpirationMinutes;
     @Value("${order.ttl.minutes}")
     private long ttlMinutes;
     @Value("${order.redeem-code.expiration-minutes}")
@@ -63,6 +59,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     private static final int DEFAULT_PAGE_SIZE = 10;
 
     private final LiveSightService liveSightService;
+    private final PlanService planService;
     private final OrderJwtManager orderJwtManager;
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
@@ -71,7 +68,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     private final LoggingService loggingService;
 
     @Override
-    public OrderDto createOrder(HttpServletRequest request, String productId, String namespace, String authType, String authTypeId, String salt) {
+    public OrderDto createOrder(HttpServletRequest request, String productId, String namespace, String authType, String authTypeId, String salt, String planId) {
         // 產生 Order ID
         String orderId = ORDER_PREFIX + "_" + UUID.randomUUID();
 
@@ -82,7 +79,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         ClientInfo clientInfo = ClientInfoUtil.getClientInfo(request);
 
         // 新增訂單資料
-        OrderPo result = orderRepository.create(buildCreatedOrder(orderId, namespace, productId, authType, authTypeId, clientInfo, verificationCode));
+        OrderPo result = orderRepository.create(buildCreatedOrder(orderId, namespace, productId, authType, authTypeId, clientInfo, verificationCode, planId));
 
         // 將訂單資料暫存以做 Audit Log
         setResponseContext(request, result);
@@ -145,18 +142,34 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         // 產生當下時間
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
-        // 產生過期時間
-        LocalDate tomorrow = now.toLocalDate().plusDays(1);
-        ZonedDateTime expireTime = ZonedDateTime.of(tomorrow, LocalTime.MIDNIGHT, ZONE_ID);
-
         // 為了取得 tags
         OrderPo order = findOrThrowByOrderId(orderId);
 
+        String liveSightId = order.getServiceTypeId();
+        String planId = order.getPlanId();
+
+        List<PlanDto> plans = planService.findByLiveSightId(liveSightId);
+
+        Expiry expiry = null;
+
+        for (PlanDto plan : plans) {
+            if (plan.getStandard()) {
+                expiry = plan.getExpiry();
+            }
+
+            if (plan.getPlanId().equals(planId)) {
+                expiry = plan.getExpiry();
+                break;
+            }
+        }
+
+        ZonedDateTime expiredAt = getExpiredAt(now, expiry);
+
         // 產生 Access Token
-        String accessToken = orderJwtManager.genAccessToken(order, now, expireTime);
+        String accessToken = orderJwtManager.genAccessToken(order, now, expiredAt);
 
         // 修改訂單資料
-        OrderPo result = orderRepository.update(buildRedeemedOrder(orderId, productId, redeemCode, accessToken, now, expireTime));
+        OrderPo result = orderRepository.update(buildRedeemedOrder(orderId, productId, redeemCode, accessToken, now, expiredAt));
 
         // 將訂單資料暫存以做 Audit Log
         setResponseContext(request, result);
@@ -337,13 +350,13 @@ public class DynamoDbOrderServiceImpl implements OrderService {
             String authType,
             String authTypeId,
             ClientInfo clientInfo,
-            String verificationCode
+            String verificationCode,
+            String planId
     ) {
+
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
-        // 產生過期時間
-        LocalDate tomorrow = now.toLocalDate().plusDays(1);
-        ZonedDateTime expiredAt = ZonedDateTime.of(tomorrow, LocalTime.MIDNIGHT, ZONE_ID);
+        ZonedDateTime expiredAt = getExpiredAt(now, null);
 
         return OrderPo.builder()
                 .orderId(orderId)
@@ -352,6 +365,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
                 .productId(productId)
                 .serviceType(LIVE_SIGHT_NAME)
                 .serviceTypeId(extractUuid(namespace))
+                .planId(planId)
                 .authType(authType)
                 .authTypeId(authTypeId)
                 .userBrowser(clientInfo.getBrowserName())
@@ -460,5 +474,47 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         if (!inputNamespace.equals(order.getNamespace())) {
             throw new OrderApiException(OrderErrorCode._021);
         }
+    }
+
+    private ZonedDateTime alignToPeriodEnd(ZonedDateTime now, PeriodUnit unit) {
+        return switch (unit) {
+            case DAY -> now.with(LocalTime.MAX);
+            case WEEK -> now.with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY))
+                    .with(LocalTime.MAX);
+            case MONTH -> now.with(java.time.temporal.TemporalAdjusters.lastDayOfMonth())
+                    .with(LocalTime.MAX);
+            case YEAR -> now.with(java.time.temporal.TemporalAdjusters.lastDayOfYear())
+                    .with(LocalTime.MAX);
+        };
+    }
+
+    private ZonedDateTime getExpiredAt(ZonedDateTime now, Expiry expiry) {
+        ZonedDateTime defaultExpire = now.with(LocalTime.MAX).truncatedTo(ChronoUnit.SECONDS);
+
+        if (expiry == null || expiry.getExpireMode() == null) {
+            return defaultExpire;
+        }
+
+        try {
+            return switch (expiry.getExpireMode()) {
+                case RELATIVE -> {
+                    if (expiry.getDuration() == null) yield defaultExpire;
+                    yield now.plusSeconds(expiry.getDuration());
+                }
+                case PERIOD_ALIGNED -> {
+                    if (expiry.getPeriodUnit() == null) yield defaultExpire;
+                    yield alignToPeriodEnd(now, expiry.getPeriodUnit());
+                }
+                case ABSOLUTE -> {
+                    if (expiry.getFixedAt() == null) yield defaultExpire;
+                    yield expiry.getFixedAt();
+                }
+            };
+        } catch (Exception e) {
+            // 預防萬一計算過程出錯，回傳預設值
+            log.warn("Calculate expiredAt failed, fallback to EOD. error: {}", e.getMessage());
+            return defaultExpire;
+        }
+
     }
 }

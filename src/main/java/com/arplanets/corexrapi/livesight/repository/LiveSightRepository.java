@@ -8,5 +8,7 @@ public interface LiveSightRepository {
 
     LiveSightPo create(LiveSightPo liveSight);
 
+    LiveSightPo update(LiveSightPo liveSightPo);
+
     Optional<LiveSightPo> findById(String liveSightId);
 }

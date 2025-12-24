@@ -40,7 +40,6 @@ public class AwsConfig {
 
     @Bean
     public DynamoDbClient dynamoDbClient() {
-
         return DynamoDbClient.builder()
                 .region(Region.of(awsRegion))
                 .credentialsProvider(StaticCredentialsProvider.create(

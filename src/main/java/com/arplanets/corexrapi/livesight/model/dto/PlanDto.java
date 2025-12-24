@@ -1,4 +1,4 @@
-package com.arplanets.corexrapi.livesight.model.po;
+package com.arplanets.corexrapi.livesight.model.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,20 +11,25 @@ import java.time.ZonedDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LiveSightPo {
+public class PlanDto {
+
+    private String planId;
+
+    private String planName;
 
     private String liveSightId;
 
-    private String orgId;
+    private Expiry expiry;
 
-    private String createdBy;
+    private Boolean standard;
 
     private ZonedDateTime createdAt;
 
-    private String updatedBy;
+    private String createdBy;
 
     private ZonedDateTime updatedAt;
 
+    private String updatedBy;
 
-
+    private ZonedDateTime deletedAt;
 }
