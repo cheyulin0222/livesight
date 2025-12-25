@@ -19,10 +19,7 @@ import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedExce
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -144,10 +141,22 @@ public class DynamoDbPlanServiceImpl implements PlanService {
 
     @Cacheable(value = PLANS_FROM_LIVE_SIGHT_CACHE, key="#liveSightId")
     @Override
-    public List<PlanDto> findByLiveSightId(String liveSightId) {
+    public Map<String, PlanDto> findByLiveSightId(String liveSightId) {
         List<PlanPo> result = planRepository.listByLiveSightId(liveSightId);
 
-        return result.stream().map(planMapper::planePoToPlaneDto).toList();
+        Map<String, PlanDto> planMap = new HashMap<>(result.size() + 1);
+
+        for (PlanPo plan : result) {
+            PlanDto dto = planMapper.planePoToPlaneDto(plan);
+
+            planMap.put(dto.getPlanId(), dto);
+
+            if (Boolean.TRUE.equals(dto.getStandard())) {
+                planMap.put("standard", dto);
+            }
+        }
+
+        return planMap;
     }
 
     private PlanPo buildCreatePlane(PlanCreateRequest plan, String liveSightId, String user, ZonedDateTime now) {

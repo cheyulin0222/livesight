@@ -26,7 +26,7 @@ public class CacheConfig {
                 .initialCapacity(10) // 初始容量
                 .maximumSize(100) // 最大容量
                 // 數據在指定時間後過期（從寫入或上次訪問算起）
-                .expireAfterWrite(10, TimeUnit.MINUTES); // 例如：10分鐘後過期
+                .expireAfterWrite(1, TimeUnit.MINUTES); // 例如：10分鐘後過期
     }
 
 }

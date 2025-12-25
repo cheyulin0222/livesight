@@ -21,6 +21,9 @@ public class OrderStatusResponse {
     @Schema(description = "訂單 ID", example = "order_0052cc4a-8cdf-4d5c-9aeb-b155bdb10369")
     @JsonProperty("order_id")
     private String orderId;
+    @Schema(description = "方案 ID", example = "0052cc4a-8cdf-4d5c-9aeb-b155bdb10369")
+    @JsonProperty("plan_id")
+    private String planId;
     @Schema(description = "訂單狀態", example = "ACTIVATED")
     @JsonProperty("order_status")
     private OrderStatus orderStatus;

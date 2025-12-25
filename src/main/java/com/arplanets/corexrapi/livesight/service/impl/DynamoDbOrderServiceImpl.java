@@ -11,7 +11,6 @@ import com.arplanets.corexrapi.livesight.model.bo.OrderIotPayload;
 import com.arplanets.corexrapi.livesight.model.dto.req.OrderFilterRequest;
 import com.arplanets.corexrapi.livesight.model.dto.req.PageRequest;
 import com.arplanets.corexrapi.livesight.model.dto.res.PageResult;
-import com.arplanets.corexrapi.livesight.model.eunms.ExpireMode;
 import com.arplanets.corexrapi.livesight.model.eunms.OrderStatus;
 import com.arplanets.corexrapi.livesight.model.eunms.PeriodUnit;
 import com.arplanets.corexrapi.livesight.model.po.OrderPo;
@@ -142,28 +141,14 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         // 產生當下時間
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
-        // 為了取得 tags
+        // 為了取得 plan 和 tag
         OrderPo order = findOrThrowByOrderId(orderId);
 
-        String liveSightId = order.getServiceTypeId();
-        String planId = order.getPlanId();
+        // 取得 plan
+        PlanDto plan = getPlan(order);
 
-        List<PlanDto> plans = planService.findByLiveSightId(liveSightId);
-
-        Expiry expiry = null;
-
-        for (PlanDto plan : plans) {
-            if (plan.getStandard()) {
-                expiry = plan.getExpiry();
-            }
-
-            if (plan.getPlanId().equals(planId)) {
-                expiry = plan.getExpiry();
-                break;
-            }
-        }
-
-        ZonedDateTime expiredAt = getExpiredAt(now, expiry);
+        // 取得 expired time
+        ZonedDateTime expiredAt = getExpiredAt(now, plan);
 
         // 產生 Access Token
         String accessToken = orderJwtManager.genAccessToken(order, now, expiredAt);
@@ -179,6 +164,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
 
     }
 
+    @Override
     public OrderDto voidOrder(HttpServletRequest request, String productId, String orgId, String namespace, String orderId, String staffId) {
         // 修改訂單資料
         OrderPo result = orderRepository.update(buildVoidedOrder(orderId, namespace, productId, staffId));
@@ -354,6 +340,7 @@ public class DynamoDbOrderServiceImpl implements OrderService {
             String planId
     ) {
 
+        Logger.info("產生訂單資料");
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
         ZonedDateTime expiredAt = getExpiredAt(now, null);
@@ -488,33 +475,65 @@ public class DynamoDbOrderServiceImpl implements OrderService {
         };
     }
 
-    private ZonedDateTime getExpiredAt(ZonedDateTime now, Expiry expiry) {
+    private ZonedDateTime getExpiredAt(ZonedDateTime now, PlanDto plan) {
+        // 產生 Default 過期時間 (當天結束)
         ZonedDateTime defaultExpire = now.with(LocalTime.MAX).truncatedTo(ChronoUnit.SECONDS);
 
+        if (plan == null) {
+            Logger.info("使用系統 Default 過期時間");
+            return defaultExpire;
+        }
+
+        Expiry expiry = plan.getExpiry();
         if (expiry == null || expiry.getExpireMode() == null) {
+            Logger.info("Live Sight 沒有 plan_id 對應的方案或 Standard 方案，使用系統 Default 過期時間");
             return defaultExpire;
         }
 
         try {
             return switch (expiry.getExpireMode()) {
                 case RELATIVE -> {
-                    if (expiry.getDuration() == null) yield defaultExpire;
-                    yield now.plusSeconds(expiry.getDuration());
+                    if (expiry.getDuration() == null) {
+                        Logger.info("沒有提供 duration，使用系統 Default 過期時間");
+                        yield defaultExpire;
+                    }
+                    Logger.info("使用 RELATIVE");
+                    yield now.plusMinutes(expiry.getDuration());
                 }
                 case PERIOD_ALIGNED -> {
-                    if (expiry.getPeriodUnit() == null) yield defaultExpire;
+                    if (expiry.getPeriodUnit() == null) {
+                        Logger.info("沒有提供 period_unit，使用系統 Default 過期時間");
+                        yield defaultExpire;
+                    }
+                    Logger.info("使用 PERIOD_ALIGNED");
                     yield alignToPeriodEnd(now, expiry.getPeriodUnit());
                 }
                 case ABSOLUTE -> {
-                    if (expiry.getFixedAt() == null) yield defaultExpire;
+                    if (expiry.getFixedAt() == null) {
+                        Logger.info("沒有提供 fixed_at，使用系統 Default 過期時間");
+                        yield defaultExpire;
+                    }
+                    Logger.info("使用 ABSOLUTE");
                     yield expiry.getFixedAt();
                 }
             };
         } catch (Exception e) {
-            // 預防萬一計算過程出錯，回傳預設值
-            log.warn("Calculate expiredAt failed, fallback to EOD. error: {}", e.getMessage());
+            Logger.error("Calculate expiredAt failed, fallback to EOD. error: " + e.getMessage());
+            Logger.info("系統錯誤，使用系統 Default 過期時間");
             return defaultExpire;
         }
+    }
 
+    private PlanDto getPlan(OrderPo order) {
+        Map<String, PlanDto> plans = planService.findByLiveSightId(order.getServiceTypeId());
+
+        PlanDto plan = plans.get(order.getPlanId());
+
+        if (plan == null) {
+            Logger.info("Live Sight 找不到 plan_id 對應的方案，使用 Live Sight 的 Standard 方案");
+            return plans.get("standard");
+        }
+
+        return plan;
     }
 }

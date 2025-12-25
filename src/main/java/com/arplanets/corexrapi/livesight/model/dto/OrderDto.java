@@ -22,6 +22,7 @@ public class OrderDto {
     private String productId;
     private String serviceType;
     private String serviceTypeId;
+    private String planId;
 
     private String authType;
     private String authTypeId;

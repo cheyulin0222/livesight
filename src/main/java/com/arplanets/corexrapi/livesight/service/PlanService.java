@@ -7,10 +7,11 @@ import com.arplanets.corexrapi.livesight.model.dto.res.PlanBatchCreateResponse;
 import com.arplanets.corexrapi.livesight.model.dto.res.PlanBatchUpdateResponse;
 
 import java.util.List;
+import java.util.Map;
 
 public interface PlanService {
 
     PlanBatchCreateResponse batchCreatePlan(List<PlanCreateRequest> planes, String liveSightId, String user);
     PlanBatchUpdateResponse batchUpdatePlan(List<PlanUpdateRequest> planes, String liveSightId, String user);
-    List<PlanDto> findByLiveSightId(String liveSightId);
+    Map<String, PlanDto> findByLiveSightId(String liveSightId);
 }
