@@ -3,6 +3,7 @@ package com.arplanets.corexrapi.livesight.model.dto.req;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,7 +25,7 @@ public class PlanBatchUpdateRequest {
     @Schema(description = "實境導覽 ID", example = "18fdc1e2-0d9b-456c-b15a-e5a4d8b4a120")
     private String liveSightId;
 
-    @NotBlank(message = "plans 不可為空")
+    @NotEmpty(message = "plans 不可為空")
     @Schema(description = "方案列表")
     private List<PlanUpdateRequest> plans;
 }

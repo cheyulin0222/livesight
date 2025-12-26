@@ -2,6 +2,7 @@ package com.arplanets.corexrapi.livesight.controller;
 
 import com.arplanets.corexrapi.livesight.exception.OrderApiException;
 import com.arplanets.corexrapi.livesight.exception.enums.LiveSightErrorCode;
+import com.arplanets.corexrapi.livesight.model.dto.PlanDto;
 import com.arplanets.corexrapi.livesight.model.dto.req.PlanBatchCreateRequest;
 import com.arplanets.corexrapi.livesight.model.dto.req.PlanBatchUpdateRequest;
 import com.arplanets.corexrapi.livesight.model.dto.res.PlanBatchCreateResponse;
@@ -19,10 +20,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 
 @RestController
@@ -55,7 +55,7 @@ public class PlanController {
 
     @PostMapping(value = "/update", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "修改 Plan", security = @SecurityRequirement(name = "bearerAuth"))
-    @PreAuthorize("@planPermissionChecker.checkPlanUpdatePermission(#request.orgId, #request.liveSightId, #authentication)")
+    @PreAuthorize("@planPermissionChecker.checkPlanUpdatePermission(#request.orgId, #request.liveSightId, #request.plans, #authentication)")
     public ResponseEntity<PlanBatchUpdateResponse> create(@RequestBody @Valid PlanBatchUpdateRequest request, Authentication authentication) {
 
         String username = null;
@@ -68,6 +68,14 @@ public class PlanController {
         }
 
         PlanBatchUpdateResponse result = planService.batchUpdatePlan(request.getPlans(), request.getLiveSightId(), username);
+
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping(value = "/debug/{liveSightId}", produces = {MediaType.APPLICATION_JSON_VALUE})
+    @Operation(summary = "查詢 Plans (Debug)", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<Map<String, PlanDto>> search(@PathVariable String liveSightId) {
+        Map<String, PlanDto> result = planService.findByLiveSightId(liveSightId);
 
         return ResponseEntity.ok(result);
     }

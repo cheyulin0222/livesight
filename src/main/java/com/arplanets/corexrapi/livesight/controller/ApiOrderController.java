@@ -33,7 +33,7 @@ public class ApiOrderController {
 
     @PostMapping(value = "/create", produces = {MediaType.APPLICATION_JSON_VALUE})
     @Operation(summary = "建立訂單")
-    @PreAuthorize("@permissionChecker.checkOrderCreatePermission(#orderRequest.namespace)")
+    @PreAuthorize("@permissionChecker.checkOrderCreatePermission(#orderRequest.namespace, #orderRequest.planId)")
     public ResponseEntity<OrderCreateResponse> createOrder(@RequestBody @Valid OrderCreateRequest orderRequest, HttpServletRequest request) {
         OrderDto result = orderService.createOrder(
                 request,

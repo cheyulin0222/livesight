@@ -4,8 +4,10 @@ import com.arplanets.corexrapi.livesight.exception.OrderApiException;
 import com.arplanets.corexrapi.livesight.exception.PermissionDeniedException;
 import com.arplanets.corexrapi.livesight.exception.enums.PermissionDeniedErrorCode;
 import com.arplanets.corexrapi.livesight.model.dto.LiveSightDto;
+import com.arplanets.corexrapi.livesight.model.dto.PlanDto;
 import com.arplanets.corexrapi.livesight.service.LiveSightService;
 import com.arplanets.corexrapi.livesight.service.OrgService;
+import com.arplanets.corexrapi.livesight.service.PlanService;
 import com.arplanets.corexrapi.livesight.service.ServiceOrgMemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.Map;
 
 
 @Component("permissionChecker")
@@ -24,6 +27,7 @@ public class PermissionChecker {
     private final ServiceOrgMemberService serviceOrgMemberService;
     private final OrgService orgService;
     private final LiveSightService liveSightService;
+    private final PlanService planService;
     public static final String LIVE_SIGHT_NAME = "livesight";
 
     public boolean checkLiveSightCreatePermission(String orgId, Authentication authentication) {
@@ -81,7 +85,7 @@ public class PermissionChecker {
         return true;
     }
 
-    public boolean checkOrderCreatePermission(String namespace) {
+    public boolean checkOrderCreatePermission(String namespace, String planId) {
         String liveSightId = extractUuid(namespace);
 
         // 驗證 Live Sight
@@ -89,6 +93,9 @@ public class PermissionChecker {
 
         // 驗證組織
         validateOrg(liveSight.getOrgId());
+
+        // 驗證 planId 是否屬於改 liveSight 以及是否 active
+        validatePlan(liveSightId, planId);
 
         return true;
     }
@@ -163,5 +170,16 @@ public class PermissionChecker {
         }
 
         return null;
+    }
+
+    private void validatePlan(String liveSightId, String planId) {
+        if (planId == null) {
+            return;
+        }
+
+        Map<String, PlanDto> plans = planService.findByLiveSightId(liveSightId);
+        if (!plans.containsKey(planId) || "standard".equals(planId)) {
+            throw new PermissionDeniedException(PermissionDeniedErrorCode._011);
+        };
     }
 }

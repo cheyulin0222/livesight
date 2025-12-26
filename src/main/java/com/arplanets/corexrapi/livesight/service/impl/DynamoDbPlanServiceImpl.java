@@ -1,5 +1,7 @@
 package com.arplanets.corexrapi.livesight.service.impl;
 
+import com.arplanets.corexrapi.livesight.exception.OrderApiException;
+import com.arplanets.corexrapi.livesight.exception.enums.PlanErrorCode;
 import com.arplanets.corexrapi.livesight.mapper.PlanMapper;
 import com.arplanets.corexrapi.livesight.model.dto.PlanDto;
 import com.arplanets.corexrapi.livesight.model.dto.req.PlanCreateRequest;
@@ -36,6 +38,10 @@ public class DynamoDbPlanServiceImpl implements PlanService {
 
     @Override
     public PlanBatchCreateResponse batchCreatePlan(List<PlanCreateRequest> request, String liveSightId, String uuid) {
+
+        // 驗證是否已有一般方案
+        validateStandard(liveSightId, request);
+
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
         // 1. 準備所有要寫入的 PO
@@ -93,6 +99,9 @@ public class DynamoDbPlanServiceImpl implements PlanService {
 
     @Override
     public PlanBatchUpdateResponse batchUpdatePlan(List<PlanUpdateRequest> request, String liveSightId, String user) {
+
+
+
         ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
         List<PlanPo> plans = request.stream().map(plan -> buildUpdatePlane(plan, liveSightId, user, now)).toList();
@@ -182,5 +191,17 @@ public class DynamoDbPlanServiceImpl implements PlanService {
                 .updatedBy(user)
                 .updatedAt(now)
                 .build();
+    }
+
+    private void validateStandard(String liveSightId, List<PlanCreateRequest> plans) {
+        plans.forEach(plan -> {
+            if (Boolean.TRUE.equals(plan.getStandard())) {
+                Map<String, PlanDto> storedPlans = findByLiveSightId(liveSightId);
+
+                if (storedPlans.containsKey("standard")) {
+                    throw new OrderApiException(PlanErrorCode._001);
+                }
+            }
+        });
     }
 }

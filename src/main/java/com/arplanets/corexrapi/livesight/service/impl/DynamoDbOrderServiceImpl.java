@@ -527,6 +527,8 @@ public class DynamoDbOrderServiceImpl implements OrderService {
     private PlanDto getPlan(OrderPo order) {
         Map<String, PlanDto> plans = planService.findByLiveSightId(order.getServiceTypeId());
 
+        plans.forEach((key, value) -> log.info("key = {}, value = {}", key, value));
+
         PlanDto plan = plans.get(order.getPlanId());
 
         if (plan == null) {

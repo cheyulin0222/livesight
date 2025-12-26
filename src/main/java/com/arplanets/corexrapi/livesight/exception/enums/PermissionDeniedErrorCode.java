@@ -10,7 +10,8 @@ public enum PermissionDeniedErrorCode implements BusinessExceptionDisplay{
     _007("Live Sight 無權操作此訂單"),
     _008("Live Sight 不存在"),
     _009("Product ID 無緣操作此訂單"),
-    _010("Product ID 與 namespace 不符");
+    _010("Product ID 與 namespace 不符"),
+    _011("無效的 plan_id");
 
     private final String message;
 

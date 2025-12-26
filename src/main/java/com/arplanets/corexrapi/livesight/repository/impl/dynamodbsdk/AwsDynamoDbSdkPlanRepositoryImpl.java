@@ -296,7 +296,7 @@ public class AwsDynamoDbSdkPlanRepositoryImpl implements PlanRepository {
             item.put("expiry", expiry);
         }
 
-        if (plan.getStandard()) {
+        if (Boolean.TRUE.equals(plan.getStandard())) {
             item.put("is_standard", AttributeValue.builder().n("1").build());
         } else {
             item.put("is_standard", AttributeValue.builder().n("0").build());

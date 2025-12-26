@@ -41,7 +41,7 @@ public class PlanBatchCreateRequest {
             }
 
             return request.getPlans().stream()
-                    .filter(PlanCreateRequest::getStandard)
+                    .filter(p -> Boolean.TRUE.equals(p.getStandard()))
                     .count() <= 1;
         }
     }

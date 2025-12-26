@@ -4,8 +4,11 @@ import com.arplanets.corexrapi.livesight.exception.OrderApiException;
 import com.arplanets.corexrapi.livesight.exception.PermissionDeniedException;
 import com.arplanets.corexrapi.livesight.exception.enums.PermissionDeniedErrorCode;
 import com.arplanets.corexrapi.livesight.model.dto.LiveSightDto;
+import com.arplanets.corexrapi.livesight.model.dto.PlanDto;
+import com.arplanets.corexrapi.livesight.model.dto.req.PlanUpdateRequest;
 import com.arplanets.corexrapi.livesight.service.LiveSightService;
 import com.arplanets.corexrapi.livesight.service.OrgService;
+import com.arplanets.corexrapi.livesight.service.PlanService;
 import com.arplanets.corexrapi.livesight.service.ServiceOrgMemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +16,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+
+import java.util.List;
+import java.util.Map;
 
 @Component("planPermissionChecker")
 @RequiredArgsConstructor
@@ -22,6 +28,7 @@ public class PlanPermission {
     private final OrgService orgService;
     private final ServiceOrgMemberService serviceOrgMemberService;
     private final LiveSightService liveSightService;
+    private final PlanService planService;
 
     public boolean checkPlanCreatePermission(String orgId, String liveSightId, Authentication authentication) {
         // 驗證組織
@@ -42,7 +49,7 @@ public class PlanPermission {
         return true;
     }
 
-    public boolean checkPlanUpdatePermission(String orgId, String liveSightId, Authentication authentication) {
+    public boolean checkPlanUpdatePermission(String orgId, String liveSightId, List<PlanUpdateRequest> plans, Authentication authentication) {
         // 驗證組織
         validateOrg(orgId);
 
@@ -57,6 +64,9 @@ public class PlanPermission {
 
         // 驗證 Live Sight  是否在該組織
         validateLiveSightInOrg(orgId, liveSight);
+
+        // 驗證 planId 是否屬於改 liveSight 以及是否 active
+        validatePlans(liveSightId, plans);
 
         return true;
     }
@@ -107,5 +117,15 @@ public class PlanPermission {
         if (!accessOrgId.equals(liveSight.getOrgId())) {
             throw new PermissionDeniedException(PermissionDeniedErrorCode._005);
         }
+    }
+
+    private void validatePlans(String liveSightId, List<PlanUpdateRequest> plans) {
+        Map<String, PlanDto> storedPlans = planService.findByLiveSightId(liveSightId);
+        plans.forEach(p -> {
+            if (!storedPlans.containsKey(p.getPlanId()) || "standard".equals(p.getPlanId())) {
+                throw new PermissionDeniedException(PermissionDeniedErrorCode._011);
+            };
+        });
+
     }
 }

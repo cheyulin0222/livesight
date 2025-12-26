@@ -24,4 +24,7 @@ public class PlanCreateResponse {
 
     @Schema(description = "服務效期設定")
     private Expiry expiry;
+
+    @Schema(description = "是否為一般票")
+    private Boolean standard;
 }
